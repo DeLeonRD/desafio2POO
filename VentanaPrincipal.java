@@ -3,6 +3,8 @@ package vista;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import com.mediateca.vista.formularios.*;
+import com.mediateca.vista.*;
 
 public class VentanaPrincipal extends JFrame {
 
@@ -21,13 +23,15 @@ public class VentanaPrincipal extends JFrame {
         cardLayout = new CardLayout();
         panelCentral = new JPanel(cardLayout);
 
-        // Paneles para cada opcion del menu
+        // Paneles reales de Alex Marquez
         panelCentral.add(crearPanelInicio(), "INICIO");
-        panelCentral.add(crearPanelPlaceholder("Agregar Material"), "AGREGAR");
-        panelCentral.add(crearPanelPlaceholder("Modificar Material"), "MODIFICAR");
-        panelCentral.add(crearPanelPlaceholder("Listar Materiales"), "LISTAR");
-        panelCentral.add(crearPanelPlaceholder("Borrar Material"), "BORRAR");
-        panelCentral.add(crearPanelPlaceholder("Buscar Material"), "BUSCAR");
+        panelCentral.add(new LibroForm(), "AGREGAR_LIBRO");
+        panelCentral.add(new RevistaForm(), "AGREGAR_REVISTA");
+        panelCentral.add(new CdAudioForm(), "AGREGAR_CD");
+        panelCentral.add(new DvdForm(), "AGREGAR_DVD");
+        
+        // Panel de búsqueda y listado (JTable reutilizable)
+        panelCentral.add(new BusquedaPanel(), "BUSCAR");
 
         add(panelCentral, BorderLayout.CENTER);
 
@@ -49,24 +53,29 @@ public class VentanaPrincipal extends JFrame {
         // --- Menu Material ---
         JMenu menuMaterial = new JMenu("Material");
 
-        JMenuItem itemAgregar = new JMenuItem("Agregar");
-        JMenuItem itemModificar = new JMenuItem("Modificar");
-        JMenuItem itemListar = new JMenuItem("Listar");
-        JMenuItem itemBorrar = new JMenuItem("Borrar");
-        JMenuItem itemBuscar = new JMenuItem("Buscar");
+        JMenu subMenuAgregar = new JMenu("Agregar Nuevo");
+        JMenuItem itemAddLibro = new JMenuItem("Libro");
+        JMenuItem itemAddRevista = new JMenuItem("Revista");
+        JMenuItem itemAddCD = new JMenuItem("CD Audio");
+        JMenuItem itemAddDVD = new JMenuItem("DVD");
+
+        subMenuAgregar.add(itemAddLibro);
+        subMenuAgregar.add(itemAddRevista);
+        subMenuAgregar.add(itemAddCD);
+        subMenuAgregar.add(itemAddDVD);
+
+        JMenuItem itemListar = new JMenuItem("Listar / Buscar");
 
         // Eventos - cambiar panel con CardLayout
-        itemAgregar.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR"));
-        itemModificar.addActionListener(e -> cardLayout.show(panelCentral, "MODIFICAR"));
-        itemListar.addActionListener(e -> cardLayout.show(panelCentral, "LISTAR"));
-        itemBorrar.addActionListener(e -> cardLayout.show(panelCentral, "BORRAR"));
-        itemBuscar.addActionListener(e -> cardLayout.show(panelCentral, "BUSCAR"));
+        itemAddLibro.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_LIBRO"));
+        itemAddRevista.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_REVISTA"));
+        itemAddCD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_CD"));
+        itemAddDVD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_DVD"));
+        
+        itemListar.addActionListener(e -> cardLayout.show(panelCentral, "BUSCAR"));
 
-        menuMaterial.add(itemAgregar);
-        menuMaterial.add(itemModificar);
+        menuMaterial.add(subMenuAgregar);
         menuMaterial.add(itemListar);
-        menuMaterial.add(itemBorrar);
-        menuMaterial.add(itemBuscar);
 
         // --- Menu Salir ---
         JMenu menuSalir = new JMenu("Opciones");
