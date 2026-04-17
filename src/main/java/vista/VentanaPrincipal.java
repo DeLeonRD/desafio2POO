@@ -23,15 +23,37 @@ public class VentanaPrincipal extends JFrame {
         cardLayout = new CardLayout();
         panelCentral = new JPanel(cardLayout);
 
-        // Paneles reales de Alex Marquez
+        // Paneles
         panelCentral.add(crearPanelInicio(), "INICIO");
-        panelCentral.add(new LibroForm(), "AGREGAR_LIBRO");
-        panelCentral.add(new RevistaForm(), "AGREGAR_REVISTA");
-        panelCentral.add(new CdAudioForm(), "AGREGAR_CD");
-        panelCentral.add(new DvdForm(), "AGREGAR_DVD");
-        
-        // Panel de búsqueda y listado (JTable reutilizable)
-        panelCentral.add(new BusquedaPanel(), "BUSCAR");
+
+        // Instanciar formularios para configurar sus botones
+        LibroForm libForm = new LibroForm();
+        RevistaForm revForm = new RevistaForm();
+        CdAudioForm cdForm = new CdAudioForm();
+        DvdForm dvdForm = new DvdForm();
+
+        // Configurar navegación y validación para cada uno
+        configurarEventosFormulario(libForm);
+        configurarEventosFormulario(revForm);
+        configurarEventosFormulario(cdForm);
+        configurarEventosFormulario(dvdForm);
+
+        panelCentral.add(libForm, "AGREGAR_LIBRO");
+        panelCentral.add(revForm, "AGREGAR_REVISTA");
+        panelCentral.add(cdForm, "AGREGAR_CD");
+        panelCentral.add(dvdForm, "AGREGAR_DVD");
+
+        // Panel de búsqueda y listado
+        BusquedaPanel busquedaPanel = new BusquedaPanel();
+
+        // Configurar botón "Limpiar Búsqueda"
+        busquedaPanel.setAccionActualizar(e -> {
+            busquedaPanel.limpiarBusqueda();
+            // Nota para De Leon: Aquí se debe recargar el MaterialTableModel con todos los
+            // datos del DAO.
+        });
+
+        panelCentral.add(busquedaPanel, "BUSCAR");
 
         add(panelCentral, BorderLayout.CENTER);
 
@@ -71,7 +93,7 @@ public class VentanaPrincipal extends JFrame {
         itemAddRevista.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_REVISTA"));
         itemAddCD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_CD"));
         itemAddDVD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_DVD"));
-        
+
         itemListar.addActionListener(e -> cardLayout.show(panelCentral, "BUSCAR"));
 
         menuMaterial.add(subMenuAgregar);
@@ -86,11 +108,10 @@ public class VentanaPrincipal extends JFrame {
         itemInicio.addActionListener(e -> cardLayout.show(panelCentral, "INICIO"));
         itemSalir.addActionListener(e -> {
             int respuesta = JOptionPane.showConfirmDialog(
-                this,
-                "¿Esta seguro que desea salir?",
-                "Confirmar salida",
-                JOptionPane.YES_NO_OPTION
-            );
+                    this,
+                    "¿Esta seguro que desea salir?",
+                    "Confirmar salida",
+                    JOptionPane.YES_NO_OPTION);
             if (respuesta == JOptionPane.YES_OPTION) {
                 System.exit(0);
             }
@@ -109,6 +130,29 @@ public class VentanaPrincipal extends JFrame {
     // ============================
     // Panel de Inicio (bienvenida)
     // ============================
+    /**
+     * - Conecta los botones de los formularios con la lógica de la ventana
+     * - (Integración UI).
+     * - Nota: El guardado real en DB lo integrará De Leon en la Fase 5.
+     */
+    private void configurarEventosFormulario(MaterialForm form) {
+        // Al cancelar, volvemos al inicio
+        form.setAccionCancelar(e -> cardLayout.show(panelCentral, "INICIO"));
+
+        // Al guardar, disparamos las validaciones
+        form.setAccionGuardar(e -> {
+            if (form.validarDatos()) {
+                JOptionPane.showMessageDialog(this,
+                        "Registro procesado exitosamente.",
+                        "Sistema Mediateca",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                // Limpiar campos después del éxito
+                form.limpiarCampos();
+            }
+        });
+    }
+
     private JPanel crearPanelInicio() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(240, 248, 255));

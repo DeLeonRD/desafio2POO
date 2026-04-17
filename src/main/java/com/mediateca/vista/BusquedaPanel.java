@@ -32,26 +32,18 @@ public class BusquedaPanel extends JPanel {
         // Armar el panel
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(new JScrollPane(tablaMateriales), BorderLayout.CENTER);
-        add(crearPanelInferior(), BorderLayout.SOUTH);
     }
 
     private JPanel crearPanelSuperior() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         
         panel.add(new JLabel("Criterio de búsqueda:"));
-        txtBusqueda = new JTextField(25);
+        txtBusqueda = new JTextField(20);
         btnBuscar = new JButton("Buscar");
+        btnActualizar = new JButton("Limpiar Búsqueda");
         
         panel.add(txtBusqueda);
         panel.add(btnBuscar);
-        
-        return panel;
-    }
-
-    private JPanel crearPanelInferior() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        
-        btnActualizar = new JButton("Actualizar Lista Completa");
         panel.add(btnActualizar);
         
         return panel;
@@ -70,10 +62,14 @@ public class BusquedaPanel extends JPanel {
     }
 
     /**
-     * Facilita la obtención del texto de búsqueda.
+     * Facilita la obtención del texto de búsqueda y limpieza.
      */
     public String getTextoBusqueda() {
         return txtBusqueda.getText();
+    }
+
+    public void limpiarBusqueda() {
+        txtBusqueda.setText("");
     }
 
     /**

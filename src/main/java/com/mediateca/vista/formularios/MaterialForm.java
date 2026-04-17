@@ -5,8 +5,8 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 
 /**
- * - Clase base abstracta para los formularios de la mediateca.
- * - Proporciona un diseño consistente con botones de acción predefinidos.
+ * Clase base abstracta para todos los formularios de la Mediateca.
+ * Define la estructura visual común y obliga a implementar validaciones.
  */
 public abstract class MaterialForm extends JPanel {
 
@@ -56,10 +56,15 @@ public abstract class MaterialForm extends JPanel {
     }
 
     /**
-     * - Metodo obligatorio para que cada formulario limpie sus propios campos de
-     * texto.
+     * Limpia todos los campos de texto del formulario.
      */
     public abstract void limpiarCampos();
+
+    /**
+     * Valida que los datos ingresados sean correctos antes de procesar.
+     * @return true si los datos son válidos, false de lo contrario.
+     */
+    public abstract boolean validarDatos();
 
     /**
      * - Permite a la VentanaPrincipal o al controlador asignar acciones a los
