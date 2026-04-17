@@ -3,6 +3,7 @@ package vista;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import com.mediateca.model.Material; // Importación crítica añadida
 import com.mediateca.vista.formularios.*;
 import com.mediateca.vista.*;
 
@@ -49,8 +50,31 @@ public class VentanaPrincipal extends JFrame {
         // Configurar botón "Limpiar Búsqueda"
         busquedaPanel.setAccionActualizar(e -> {
             busquedaPanel.limpiarBusqueda();
-            // Nota para De Leon: Aquí se debe recargar el MaterialTableModel con todos los
-            // datos del DAO.
+            // Nota para De Leon: Aquí se debe recargar el MaterialTableModel con todos los datos del DAO.
+        });
+
+        // Configurar botón "Editar Seleccionado" (Flujo: Tabla -> Formulario)
+        busquedaPanel.setAccionEditar(e -> {
+            Material seleccionado = busquedaPanel.getMaterialSeleccionado();
+            if (seleccionado != null) {
+                JOptionPane.showMessageDialog(this, 
+                    "Editando: " + seleccionado.getId() + "\n(De Leon debe mapear los datos al formulario correspondiente)");
+            } else {
+                JOptionPane.showMessageDialog(this, "Por favor, selecciona un material de la tabla.", "Sin selección", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        // Configurar botón "Eliminar Seleccionado" (Flujo: Tabla -> DAO)
+        busquedaPanel.setAccionEliminar(e -> {
+            Material seleccionado = busquedaPanel.getMaterialSeleccionado();
+            if (seleccionado != null) {
+                int r = JOptionPane.showConfirmDialog(this, "¿Seguro que desea eliminar el material " + seleccionado.getId() + "?", "Confirmar", JOptionPane.YES_NO_OPTION);
+                if (r == JOptionPane.YES_OPTION) {
+                    JOptionPane.showMessageDialog(this, "Eliminando... (De Leon conectará aquí el DAO de Ricardo)");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Por favor, selecciona un material de la tabla.", "Sin selección", JOptionPane.WARNING_MESSAGE);
+            }
         });
 
         panelCentral.add(busquedaPanel, "BUSCAR");

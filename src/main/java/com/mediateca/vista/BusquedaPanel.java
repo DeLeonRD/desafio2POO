@@ -1,8 +1,10 @@
 package com.mediateca.vista;
 
+import com.mediateca.model.Material;
 import com.mediateca.vista.tablas.MaterialTableModel;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 
 /**
  * Panel central para la búsqueda y visualización de materiales.
@@ -14,6 +16,8 @@ public class BusquedaPanel extends JPanel {
     private JTextField txtBusqueda;
     private JButton btnBuscar;
     private JButton btnActualizar;
+    private JButton btnEditar; // Declaración faltante
+    private JButton btnEliminar; // Declaración faltante
     private JTable tablaMateriales;
     private MaterialTableModel modeloTabla;
 
@@ -32,11 +36,11 @@ public class BusquedaPanel extends JPanel {
         // Armar el panel
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(new JScrollPane(tablaMateriales), BorderLayout.CENTER);
+        add(crearPanelAcciones(), BorderLayout.SOUTH);
     }
 
     private JPanel crearPanelSuperior() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        
         panel.add(new JLabel("Criterio de búsqueda:"));
         txtBusqueda = new JTextField(20);
         btnBuscar = new JButton("Buscar");
@@ -45,6 +49,20 @@ public class BusquedaPanel extends JPanel {
         panel.add(txtBusqueda);
         panel.add(btnBuscar);
         panel.add(btnActualizar);
+        
+        return panel;
+    }
+
+    private JPanel crearPanelAcciones() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnEditar = new JButton("Editar Seleccionado");
+        btnEliminar = new JButton("Eliminar Seleccionado");
+        
+        // Color sugerido para eliminar (discreto)
+        btnEliminar.setForeground(new Color(150, 0, 0));
+        
+        panel.add(btnEditar);
+        panel.add(btnEliminar);
         
         return panel;
     }
@@ -70,6 +88,31 @@ public class BusquedaPanel extends JPanel {
 
     public void limpiarBusqueda() {
         txtBusqueda.setText("");
+    }
+
+    /**
+     * Retorna el objeto Material de la fila seleccionada.
+     * @return Material seleccionado o null si no hay selección.
+     */
+    public Material getMaterialSeleccionado() {
+        int fila = tablaMateriales.getSelectedRow();
+        if (fila != -1) {
+            // Convertir índice de vista a modelo (por si la tabla está ordenada)
+            int filaModelo = tablaMateriales.convertRowIndexToModel(fila);
+            return modeloTabla.getMaterialAt(filaModelo);
+        }
+        return null;
+    }
+
+    /**
+     * Configuración de eventos para el controlador.
+     */
+    public void setAccionEditar(ActionListener listener) {
+        btnEditar.addActionListener(listener);
+    }
+
+    public void setAccionEliminar(ActionListener listener) {
+        btnEliminar.addActionListener(listener);
     }
 
     /**
