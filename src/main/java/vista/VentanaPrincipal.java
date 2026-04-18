@@ -3,6 +3,9 @@ package vista;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import com.mediateca.model.Material; // Importación crítica añadida
+import com.mediateca.vista.formularios.*;
+import com.mediateca.vista.*;
 
 public class VentanaPrincipal extends JFrame {
 
@@ -21,13 +24,60 @@ public class VentanaPrincipal extends JFrame {
         cardLayout = new CardLayout();
         panelCentral = new JPanel(cardLayout);
 
-        // Paneles para cada opcion del menu
+        // Paneles
         panelCentral.add(crearPanelInicio(), "INICIO");
-        panelCentral.add(crearPanelPlaceholder("Agregar Material"), "AGREGAR");
-        panelCentral.add(crearPanelPlaceholder("Modificar Material"), "MODIFICAR");
-        panelCentral.add(crearPanelPlaceholder("Listar Materiales"), "LISTAR");
-        panelCentral.add(crearPanelPlaceholder("Borrar Material"), "BORRAR");
-        panelCentral.add(crearPanelPlaceholder("Buscar Material"), "BUSCAR");
+
+        // Instanciar formularios para configurar sus botones
+        LibroForm libForm = new LibroForm();
+        RevistaForm revForm = new RevistaForm();
+        CdAudioForm cdForm = new CdAudioForm();
+        DvdForm dvdForm = new DvdForm();
+
+        // Configurar navegación y validación para cada uno
+        configurarEventosFormulario(libForm);
+        configurarEventosFormulario(revForm);
+        configurarEventosFormulario(cdForm);
+        configurarEventosFormulario(dvdForm);
+
+        panelCentral.add(libForm, "AGREGAR_LIBRO");
+        panelCentral.add(revForm, "AGREGAR_REVISTA");
+        panelCentral.add(cdForm, "AGREGAR_CD");
+        panelCentral.add(dvdForm, "AGREGAR_DVD");
+
+        // Panel de búsqueda y listado
+        BusquedaPanel busquedaPanel = new BusquedaPanel();
+
+        // Configurar botón "Limpiar Búsqueda"
+        busquedaPanel.setAccionActualizar(e -> {
+            busquedaPanel.limpiarBusqueda();
+            // Nota para De Leon: Aquí se debe recargar el MaterialTableModel con todos los datos del DAO.
+        });
+
+        // Configurar botón "Editar Seleccionado" (Flujo: Tabla -> Formulario)
+        busquedaPanel.setAccionEditar(e -> {
+            Material seleccionado = busquedaPanel.getMaterialSeleccionado();
+            if (seleccionado != null) {
+                JOptionPane.showMessageDialog(this, 
+                    "Editando: " + seleccionado.getId() + "\n(De Leon debe mapear los datos al formulario correspondiente)");
+            } else {
+                JOptionPane.showMessageDialog(this, "Por favor, selecciona un material de la tabla.", "Sin selección", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        // Configurar botón "Eliminar Seleccionado" (Flujo: Tabla -> DAO)
+        busquedaPanel.setAccionEliminar(e -> {
+            Material seleccionado = busquedaPanel.getMaterialSeleccionado();
+            if (seleccionado != null) {
+                int r = JOptionPane.showConfirmDialog(this, "¿Seguro que desea eliminar el material " + seleccionado.getId() + "?", "Confirmar", JOptionPane.YES_NO_OPTION);
+                if (r == JOptionPane.YES_OPTION) {
+                    JOptionPane.showMessageDialog(this, "Eliminando... (De Leon conectará aquí el DAO de Ricardo)");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Por favor, selecciona un material de la tabla.", "Sin selección", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        panelCentral.add(busquedaPanel, "BUSCAR");
 
         add(panelCentral, BorderLayout.CENTER);
 
@@ -49,24 +99,29 @@ public class VentanaPrincipal extends JFrame {
         // --- Menu Material ---
         JMenu menuMaterial = new JMenu("Material");
 
-        JMenuItem itemAgregar = new JMenuItem("Agregar");
-        JMenuItem itemModificar = new JMenuItem("Modificar");
-        JMenuItem itemListar = new JMenuItem("Listar");
-        JMenuItem itemBorrar = new JMenuItem("Borrar");
-        JMenuItem itemBuscar = new JMenuItem("Buscar");
+        JMenu subMenuAgregar = new JMenu("Agregar Nuevo");
+        JMenuItem itemAddLibro = new JMenuItem("Libro");
+        JMenuItem itemAddRevista = new JMenuItem("Revista");
+        JMenuItem itemAddCD = new JMenuItem("CD Audio");
+        JMenuItem itemAddDVD = new JMenuItem("DVD");
+
+        subMenuAgregar.add(itemAddLibro);
+        subMenuAgregar.add(itemAddRevista);
+        subMenuAgregar.add(itemAddCD);
+        subMenuAgregar.add(itemAddDVD);
+
+        JMenuItem itemListar = new JMenuItem("Listar / Buscar");
 
         // Eventos - cambiar panel con CardLayout
-        itemAgregar.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR"));
-        itemModificar.addActionListener(e -> cardLayout.show(panelCentral, "MODIFICAR"));
-        itemListar.addActionListener(e -> cardLayout.show(panelCentral, "LISTAR"));
-        itemBorrar.addActionListener(e -> cardLayout.show(panelCentral, "BORRAR"));
-        itemBuscar.addActionListener(e -> cardLayout.show(panelCentral, "BUSCAR"));
+        itemAddLibro.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_LIBRO"));
+        itemAddRevista.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_REVISTA"));
+        itemAddCD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_CD"));
+        itemAddDVD.addActionListener(e -> cardLayout.show(panelCentral, "AGREGAR_DVD"));
 
-        menuMaterial.add(itemAgregar);
-        menuMaterial.add(itemModificar);
+        itemListar.addActionListener(e -> cardLayout.show(panelCentral, "BUSCAR"));
+
+        menuMaterial.add(subMenuAgregar);
         menuMaterial.add(itemListar);
-        menuMaterial.add(itemBorrar);
-        menuMaterial.add(itemBuscar);
 
         // --- Menu Salir ---
         JMenu menuSalir = new JMenu("Opciones");
@@ -77,11 +132,10 @@ public class VentanaPrincipal extends JFrame {
         itemInicio.addActionListener(e -> cardLayout.show(panelCentral, "INICIO"));
         itemSalir.addActionListener(e -> {
             int respuesta = JOptionPane.showConfirmDialog(
-                this,
-                "¿Esta seguro que desea salir?",
-                "Confirmar salida",
-                JOptionPane.YES_NO_OPTION
-            );
+                    this,
+                    "¿Esta seguro que desea salir?",
+                    "Confirmar salida",
+                    JOptionPane.YES_NO_OPTION);
             if (respuesta == JOptionPane.YES_OPTION) {
                 System.exit(0);
             }
@@ -100,6 +154,29 @@ public class VentanaPrincipal extends JFrame {
     // ============================
     // Panel de Inicio (bienvenida)
     // ============================
+    /**
+     * - Conecta los botones de los formularios con la lógica de la ventana
+     * - (Integración UI).
+     * - Nota: El guardado real en DB lo integrará De Leon en la Fase 5.
+     */
+    private void configurarEventosFormulario(MaterialForm form) {
+        // Al cancelar, volvemos al inicio
+        form.setAccionCancelar(e -> cardLayout.show(panelCentral, "INICIO"));
+
+        // Al guardar, disparamos las validaciones
+        form.setAccionGuardar(e -> {
+            if (form.validarDatos()) {
+                JOptionPane.showMessageDialog(this,
+                        "Registro procesado exitosamente.",
+                        "Sistema Mediateca",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                // Limpiar campos después del éxito
+                form.limpiarCampos();
+            }
+        });
+    }
+
     private JPanel crearPanelInicio() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(240, 248, 255));
