@@ -19,23 +19,27 @@ public class PanelListarLibros extends JPanel {
         controller = new LibroController();
         setLayout(new BorderLayout());
 
+        // cl
         modelo = new DefaultTableModel();
         modelo.addColumn("ID");
         modelo.addColumn("Título");
         modelo.addColumn("Autor");
         modelo.addColumn("Año");
 
+        // tb
         tabla = new JTable(modelo);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
 
-        JButton btn = new JButton("Cargar");
+        // bt n
+        JButton btn = new JButton("Cargar datos");
         add(btn, BorderLayout.SOUTH);
 
-        btn.addActionListener(e -> cargar());
+        btn.addActionListener(e -> cargarDatos());
     }
 
-    private void cargar() {
-        modelo.setRowCount(0);
+    private void cargarDatos() {
+
+        modelo.setRowCount(0); // pa limp tl
 
         List<Libro> lista = controller.listarLibros();
 
