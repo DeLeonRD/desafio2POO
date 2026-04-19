@@ -1,4 +1,7 @@
 package com.mediateca.dao;
+import java.util.ArrayList;
+import java.util.List;
+import java.sql.*;
 
 import com.mediateca.model.Libro;
 import java.sql.*;
@@ -108,6 +111,31 @@ public class LibroDAO extends MaterialDAO<Libro> {
         }
     }
 
+    public List<Libro> obtenerLibros() {
+    List<Libro> lista = new ArrayList<>();
+
+    try {
+        Connection conn = getConexion(); // si no tienes getConexion(), usa DatabaseConnection.getConnection()
+        String sql = "SELECT * FROM libro";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        while (rs.next()) {
+            Libro libro = new Libro();
+            libro.setId(rs.getInt("id"));
+            libro.setTitulo(rs.getString("titulo"));
+            libro.setAutor(rs.getString("autor"));
+            libro.setAnio(rs.getInt("anio"));
+
+            lista.add(libro);
+        }
+
+    } catch (Exception e) {
+        System.out.println("Error al obtener libros: " + e.getMessage());
+    }
+
+    return lista;
+    }
     /**
      * Elimina un libro de la base de datos por su ID.
      * Maneja transacción para evitar inconsistencias.

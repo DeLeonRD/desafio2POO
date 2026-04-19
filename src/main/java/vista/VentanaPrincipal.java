@@ -1,5 +1,4 @@
 package vista;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -70,7 +69,9 @@ public class VentanaPrincipal extends JFrame {
             if (seleccionado != null) {
                 int r = JOptionPane.showConfirmDialog(this, "¿Seguro que desea eliminar el material " + seleccionado.getId() + "?", "Confirmar", JOptionPane.YES_NO_OPTION);
                 if (r == JOptionPane.YES_OPTION) {
-                    JOptionPane.showMessageDialog(this, "Eliminando... (De Leon conectará aquí el DAO de Ricardo)");
+                    com.mediateca.control.LibroController controller = new com.mediateca.control.LibroController();
+                    controller.eliminarLibro(seleccionado.getId());
+                    JOptionPane.showMessageDialog(this, "Eliminado correctamente");
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "Por favor, selecciona un material de la tabla.", "Sin selección", JOptionPane.WARNING_MESSAGE);
@@ -161,19 +162,29 @@ public class VentanaPrincipal extends JFrame {
      */
     private void configurarEventosFormulario(MaterialForm form) {
         // Al cancelar, volvemos al inicio
-        form.setAccionCancelar(e -> cardLayout.show(panelCentral, "INICIO"));
+form.setAccionGuardar(e -> {
+    if (form.validarDatos()) {
 
-        // Al guardar, disparamos las validaciones
-        form.setAccionGuardar(e -> {
-            if (form.validarDatos()) {
-                JOptionPane.showMessageDialog(this,
-                        "Registro procesado exitosamente.",
-                        "Sistema Mediateca",
-                        JOptionPane.INFORMATION_MESSAGE);
+        // SOLO para LibroForm
+        if (form instanceof LibroForm) {
+            LibroForm libroForm = (LibroForm) form;
 
-                // Limpiar campos después del éxito
-                form.limpiarCampos();
-            }
+            com.mediateca.control.LibroController controller = new com.mediateca.control.LibroController();
+
+            controller.guardarLibro(
+                libroForm.getTxtTitulo().getText(),
+                libroForm.getTxtAutor().getText(),
+                libroForm.getTxtAnio().getText()
+            );
+        }
+
+        JOptionPane.showMessageDialog(this,
+                "Guardado correctamente",
+                "Sistema",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        form.limpiarCampos();
+    }
         });
     }
 
