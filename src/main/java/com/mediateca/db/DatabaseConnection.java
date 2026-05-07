@@ -10,11 +10,13 @@ public class DatabaseConnection {
 
     private static DatabaseConnection instancia;
     private Connection conexion;
-    private String url;
-    private String user;
-    private String password;
+    private String url, user, password;
 
     private DatabaseConnection() {
+        conectar();
+    }
+
+    private void conectar() {
         try {
             cargarConfiguracion();
             conexion = DriverManager.getConnection(url, user, password);
@@ -26,28 +28,17 @@ public class DatabaseConnection {
 
     private void cargarConfiguracion() throws Exception {
         Properties props = new Properties();
-        String configFile = "config.properties";
-        
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream(configFile)) {
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
-                System.out.println("No se encontró " + configFile + " en el classpath");
-                System.out.println("Usando valores por defecto...");
-                
-                // Valores por defecto (para desarrollo)
-                url = "jdbc:mysql://localhost:3306/mediateca?useSSL=false&serverTimezone=UTC";
+                url = "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
                 user = "root";
-                password = "tu_contraseña_aqui";
+                password = "root123";
                 return;
             }
-            
             props.load(input);
-            url = props.getProperty("db.url", "jdbc:mysql://localhost:3306/mediateca?useSSL=false&serverTimezone=UTC");
+            url = props.getProperty("db.url", "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
             user = props.getProperty("db.user", "root");
-            password = props.getProperty("db.password");
-            
-            if (password == null || password.equals("tu_contraseña_aqui")) {
-                System.out.println("⚠️ ADVERTENCIA: Debes configurar tu contraseña en config.properties");
-            }
+            password = props.getProperty("db.password", "root123");
         }
     }
 
@@ -59,17 +50,13 @@ public class DatabaseConnection {
     }
 
     public Connection getConexion() {
-        return conexion;
-    }
-    
-    public void cerrarConexion() {
         try {
-            if (conexion != null && !conexion.isClosed()) {
-                conexion.close();
-                System.out.println("Conexión cerrada");
+            if (conexion == null || conexion.isClosed()) {
+                conectar();
             }
         } catch (SQLException e) {
-            System.out.println("Error al cerrar conexión: " + e.getMessage());
+            conectar();
         }
+        return conexion;
     }
 }

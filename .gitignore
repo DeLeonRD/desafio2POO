@@ -1,0 +1,26 @@
+# Compiled files
+*.class
+target/
+
+# IDE files
+.classpath
+.project
+.settings/
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Database credentials (¡IMPORTANTE!)
+config.properties
+src/main/resources/config.properties
+
+# Temporary files
+*.tmp
+*.bak
+*~
