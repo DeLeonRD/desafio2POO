@@ -98,7 +98,7 @@ public class Main {
         System.out.println("[OK] Programa finalizado.");
     }
     
-    // ==================== LOGIN CON REINTENTOS ====================
+    // ==================== LOGIN ====================
     private static boolean login() {
         int intentos = 0;
         
@@ -174,7 +174,7 @@ public class Main {
     // ==================== MENU EMPLEADO ====================
     private static boolean menuEmpleado() {
         int opcion = 0;
-        while (opcion != 10) {
+        while (opcion != 11) {
             System.out.println("\n===========================================");
             System.out.println("            MENU EMPLEADO                  ");
             System.out.println("===========================================");
@@ -189,7 +189,8 @@ public class Main {
             System.out.println("   8. Ver prestamos por usuario");
             System.out.println("\nPRESTAMOS:");
             System.out.println("   9. Registrar nuevo prestamo");
-            System.out.println("\n  10. Cerrar sesion");
+            System.out.println("  10. Registrar devolucion");
+            System.out.println("\n  11. Cerrar sesion");
             System.out.print("\nSeleccione una opcion: ");
             opcion = scanner.nextInt();
             switch (opcion) {
@@ -202,7 +203,8 @@ public class Main {
                 case 7: buscarMaterialPorIdEmpleado(); break;
                 case 8: verPrestamosPorUsuario(); break;
                 case 9: registrarPrestamo(); break;
-                case 10: return true;
+                case 10: registrarDevolucion(); break;
+                case 11: return true;
                 default: System.out.println("[ERROR] Opcion no valida.");
             }
         }
@@ -453,6 +455,21 @@ public class Main {
     
     // ==================== MATERIALES ====================
     
+    private static void mostrarUsuariosDisponibles() {
+        System.out.println("\nUsuarios disponibles en el sistema:");
+        System.out.println("+----+------------------+--------------------------+----------+");
+        System.out.println("| ID | Nombre           | Email                    | Tipo     |");
+        System.out.println("+----+------------------+--------------------------+----------+");
+        for (Usuario u : usuarioDAO.listarTodos()) {
+            System.out.printf("| %2d | %-16s | %-24s | %-8s |\n", 
+                u.getIdUsuario(), 
+                u.getNombre().length() > 16 ? u.getNombre().substring(0,13) + "..." : u.getNombre(),
+                u.getEmail().length() > 24 ? u.getEmail().substring(0,21) + "..." : u.getEmail(),
+                u.getTipo());
+        }
+        System.out.println("+----+------------------+--------------------------+----------+");
+    }
+    
     private static void listarMateriales() {
         System.out.println("\n--- MATERIALES DISPONIBLES ---");
         System.out.println("+----+----------+--------------------------+------+------------+");
@@ -630,11 +647,8 @@ public class Main {
                 Date fechaEsperada = rs.getDate("fecha_devolucion_esperada");
                 LocalDate fechaVencimiento = fechaEsperada.toLocalDate();
                 LocalDate hoy = LocalDate.now();
-                long diasRetraso = ChronoUnit.DAYS.between(fechaVencimiento, hoy);
-                double mora = 0;
-                if (diasRetraso > 0) {
-                    mora = diasRetraso * configDAO.getMoraPorDia();
-                }
+                long diasRetraso = hoy.isAfter(fechaVencimiento) ? ChronoUnit.DAYS.between(fechaVencimiento, hoy) : 0;
+                double mora = diasRetraso * configDAO.getMoraPorDia();
                 String diasVencimientoStr = (diasRetraso > 0) ? diasRetraso + " días" : "Vigente";
                 System.out.printf("| %2d | %-24s | %-8s | %-11s | %-11s | %14s | %10.2f |\n", 
                     rs.getInt("id_prestamo"), tituloCorto, tipo,
@@ -647,30 +661,70 @@ public class Main {
         pausar();
     }
     
+    // ==================== TABLA DETALLADA DE PRESTAMOS ====================
     private static void listarTodosPrestamosTabla() {
         System.out.println("\n--- TODOS LOS PRESTAMOS ---");
-        System.out.println("+----+------------------+--------------------------+----------+-------------+-------------+----------+");
-        System.out.println("| ID | Usuario          | Material                 | Tipo     | Prestamo    | Devolucion  | Estado   |");
-        System.out.println("|    |                  |                          |          | Fecha       | Esperada    |          |");
-        System.out.println("+----+------------------+--------------------------+----------+-------------+-------------+----------+");
-        String sql = "SELECT p.id_prestamo, u.nombre, m.titulo, m.tipo, p.fecha_prestamo, p.fecha_devolucion_esperada, p.estado FROM prestamos p JOIN usuarios u ON p.id_usuario = u.id_usuario JOIN material m ON p.id_material = m.id ORDER BY p.id_prestamo";
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+------------+----------+");
+        System.out.println("| ID | Material                 | Usuario          | Prestamo    | Vencimiento | Dias Vencidos  | Mora USD   | Estado   |");
+        System.out.println("|    |                          |                  | Fecha       |             |                |            |          |");
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+------------+----------+");
+        
+        double moraPorDia = configDAO.getMoraPorDia();
+        
+        String sql = "SELECT p.id_prestamo, p.id_material, p.id_usuario, p.fecha_prestamo, p.fecha_devolucion_esperada, p.estado, " +
+                     "m.titulo, u.nombre " +
+                     "FROM prestamos p " +
+                     "JOIN material m ON p.id_material = m.id " +
+                     "JOIN usuarios u ON p.id_usuario = u.id_usuario " +
+                     "ORDER BY p.id_prestamo DESC";
         try (Connection conn = DatabaseConnection.getInstancia().getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+            
             while (rs.next()) {
-                String nombre = rs.getString("nombre");
-                String nombreCorto = nombre.length() > 16 ? nombre.substring(0,13) + "..." : nombre;
                 String titulo = rs.getString("titulo");
                 String tituloCorto = titulo != null && titulo.length() > 22 ? titulo.substring(0,19) + "..." : (titulo != null ? titulo : "Sin titulo");
-                String tipo = rs.getString("tipo");
-                System.out.printf("| %2d | %-16s | %-24s | %-8s | %-11s | %-11s | %-8s |\n", 
-                    rs.getInt("id_prestamo"), nombreCorto, tituloCorto, tipo,
-                    rs.getDate("fecha_prestamo"), rs.getDate("fecha_devolucion_esperada"), rs.getString("estado"));
+                String nombre = rs.getString("nombre");
+                String nombreCorto = nombre != null && nombre.length() > 16 ? nombre.substring(0,13) + "..." : (nombre != null ? nombre : "Desconocido");
+                Date fechaPrestamo = rs.getDate("fecha_prestamo");
+                Date fechaEsperada = rs.getDate("fecha_devolucion_esperada");
+                String estado = rs.getString("estado");
+                
+                long diasRetraso = 0;
+                double mora = 0;
+                String estadoMostrar = "";
+                
+                switch (estado) {
+                    case "ACTIVO":
+                        estadoMostrar = "EN CIRCULACION";
+                        if (fechaEsperada != null) {
+                            LocalDate fechaVencimiento = fechaEsperada.toLocalDate();
+                            LocalDate hoy = LocalDate.now();
+                            diasRetraso = hoy.isAfter(fechaVencimiento) ? ChronoUnit.DAYS.between(fechaVencimiento, hoy) : 0;
+                            mora = diasRetraso * moraPorDia;
+                        }
+                        break;
+                    case "DEVUELTO":
+                        estadoMostrar = "DEVUELTO";
+                        diasRetraso = 0;
+                        mora = 0;
+                        break;
+                    case "VENCIDO":
+                        estadoMostrar = "VENCIDO";
+                        break;
+                    default:
+                        estadoMostrar = estado;
+                }
+                String diasVencimientoStr = (diasRetraso > 0) ? diasRetraso + " días" : "Vigente";
+                
+                System.out.printf("| %2d | %-24s | %-16s | %-11s | %-11s | %14s | %10.2f | %-8s |\n", 
+                    rs.getInt("id_prestamo"), tituloCorto, nombreCorto,
+                    fechaPrestamo, fechaEsperada, diasVencimientoStr, mora, estadoMostrar);
             }
         } catch (SQLException e) {
             System.out.println("[ERROR] " + e.getMessage());
         }
-        System.out.println("+----+------------------+--------------------------+----------+-------------+-------------+----------+");
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+------------+----------+");
         pausar();
     }
     
@@ -679,7 +733,7 @@ public class Main {
         int idUsuario = scanner.nextInt();
         
         if (!usuarioDAO.existeUsuario(idUsuario)) {
-            System.out.println("[ERROR] Usuario no existe.");
+            System.out.println("[ERROR] Usuario no existe. IDs disponibles: 9,10,11,12,13,14,15");
             pausar();
             return;
         }
@@ -693,6 +747,7 @@ public class Main {
         System.out.println("|    |                          |          | Fecha       |             |                |            |");
         System.out.println("+----+--------------------------+----------+-------------+-------------+----------------+------------+");
         
+        double moraPorDia = configDAO.getMoraPorDia();
         String sql = "SELECT p.id_prestamo, p.id_material, p.fecha_prestamo, p.fecha_devolucion_esperada, m.tipo " +
                      "FROM prestamos p " +
                      "JOIN material m ON p.id_material = m.id " +
@@ -710,11 +765,8 @@ public class Main {
                 Date fechaEsperada = rs.getDate("fecha_devolucion_esperada");
                 LocalDate fechaVencimiento = fechaEsperada.toLocalDate();
                 LocalDate hoy = LocalDate.now();
-                long diasRetraso = ChronoUnit.DAYS.between(fechaVencimiento, hoy);
-                double mora = 0;
-                if (diasRetraso > 0) {
-                    mora = diasRetraso * configDAO.getMoraPorDia();
-                }
+                long diasRetraso = hoy.isAfter(fechaVencimiento) ? ChronoUnit.DAYS.between(fechaVencimiento, hoy) : 0;
+                double mora = diasRetraso * moraPorDia;
                 String diasVencimientoStr = (diasRetraso > 0) ? diasRetraso + " días" : "Vigente";
                 System.out.printf("| %2d | %-24s | %-8s | %-11s | %-11s | %14s | %10.2f |\n", 
                     rs.getInt("id_prestamo"), tituloCorto, tipo,
@@ -736,7 +788,7 @@ public class Main {
         System.out.print("\nIngrese ID de usuario: ");
         int idUser = scanner.nextInt();
         if (!usuarioDAO.existeUsuario(idUser)) {
-            System.out.println("[ERROR] Usuario no existe.");
+            System.out.println("[ERROR] Usuario no existe. IDs disponibles: 9,10,11,12,13,14,15");
             pausar();
             return;
         }
@@ -750,7 +802,7 @@ public class Main {
         System.out.print("\nIngrese ID de usuario: ");
         int idUser = scanner.nextInt();
         if (!usuarioDAO.existeUsuario(idUser)) {
-            System.out.println("[ERROR] Usuario no existe.");
+            System.out.println("[ERROR] Usuario no existe. IDs disponibles: 9,10,11,12,13,14,15");
             pausar();
             return;
         }
@@ -830,15 +882,19 @@ public class Main {
         pausar();
     }
     
+    // ==================== REGISTRAR PRESTAMO ====================
     private static void registrarPrestamo() {
         System.out.println("\n--- REGISTRAR PRESTAMO ---");
+        
+        mostrarUsuariosDisponibles();
+        
         System.out.print("ID Usuario: ");
         int idUsuario = scanner.nextInt();
         System.out.print("ID Material: ");
         int idMaterial = scanner.nextInt();
         
         if (!usuarioDAO.existeUsuario(idUsuario)) {
-            System.out.println("[ERROR] Usuario no existe.");
+            System.out.println("[ERROR] Usuario no existe. Use uno de los IDs de la lista.");
             pausar();
             return;
         }
@@ -865,12 +921,10 @@ public class Main {
             return;
         }
         
-        // Obtener datos del usuario y material
         Usuario usuario = usuarioDAO.obtenerPorId(idUsuario);
         String nombreUsuario = usuario != null ? usuario.getNombre() : "Desconocido";
         String tituloMaterial = obtenerTituloMaterial(idMaterial);
         
-        // Obtener el tipo de material
         String tipoMaterial = "";
         String sqlTipo = "SELECT tipo FROM material WHERE id = ?";
         try (Connection conn = DatabaseConnection.getInstancia().getConexion();
@@ -884,10 +938,10 @@ public class Main {
             System.out.println("[ERROR] " + e.getMessage());
         }
         
-        // Obtener días según el tipo (desde la tabla tipo_material)
         int diasPrestamo = tipoMaterialDAO.getDiasPrestamo(tipoMaterial);
+        LocalDate fechaPrestamo = LocalDate.now();
+        LocalDate fechaDevolucion = fechaPrestamo.plusDays(diasPrestamo);
         
-        // Registrar prestamo con la fecha de devolución calculada
         String sql = "INSERT INTO prestamos (id_usuario, id_material, fecha_prestamo, fecha_devolucion_esperada, estado) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY), 'ACTIVO')";
         int idPrestamoGenerado = 0;
         try (Connection conn = DatabaseConnection.getInstancia().getConexion();
@@ -898,7 +952,6 @@ public class Main {
             if (pstmt.executeUpdate() > 0) {
                 materialDAO.reducirDisponibilidad(idMaterial);
                 
-                // Obtener el ID del préstamo generado
                 ResultSet generatedKeys = pstmt.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     idPrestamoGenerado = generatedKeys.getInt(1);
@@ -913,10 +966,114 @@ public class Main {
                 String tituloCorto = tituloMaterial.length() > 24 ? tituloMaterial.substring(0,21) + "..." : tituloMaterial;
                 String nombreCorto = nombreUsuario.length() > 16 ? nombreUsuario.substring(0,13) + "..." : nombreUsuario;
                 System.out.printf("| %2d | %-24s | %-16s | %-11s | %-11s |\n", 
-                    idPrestamoGenerado, tituloCorto, nombreCorto,
-                    java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(diasPrestamo));
+                    idPrestamoGenerado, tituloCorto, nombreCorto, fechaPrestamo, fechaDevolucion);
                 System.out.println("+----+--------------------------+------------------+-------------+-------------+");
-                System.out.println("Fecha de devolucion esperada: " + diasPrestamo + " dias a partir de hoy.");
+                System.out.println("Fecha de devolucion esperada: " + fechaDevolucion + " (" + diasPrestamo + " dias a partir de hoy)");
+            }
+        } catch (SQLException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+        pausar();
+    }
+    
+    // ==================== REGISTRAR DEVOLUCION ====================
+    private static void registrarDevolucion() {
+        System.out.println("\n--- REGISTRAR DEVOLUCION ---");
+        
+        System.out.println("Prestamos activos en el sistema:");
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+");
+        System.out.println("| ID | Material                 | Usuario          | Prestamo    | Vencimiento | Dias Vencidos  |");
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+");
+        
+        String sqlPrestamos = "SELECT p.id_prestamo, p.id_material, p.id_usuario, p.fecha_prestamo, p.fecha_devolucion_esperada, " +
+                               "m.titulo, u.nombre " +
+                               "FROM prestamos p " +
+                               "JOIN material m ON p.id_material = m.id " +
+                               "JOIN usuarios u ON p.id_usuario = u.id_usuario " +
+                               "WHERE p.estado = 'ACTIVO'";
+        try (Connection conn = DatabaseConnection.getInstancia().getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sqlPrestamos)) {
+            
+            boolean hayPrestamos = false;
+            while (rs.next()) {
+                hayPrestamos = true;
+                String titulo = rs.getString("titulo");
+                String tituloCorto = titulo != null && titulo.length() > 22 ? titulo.substring(0,19) + "..." : (titulo != null ? titulo : "Sin titulo");
+                String nombre = rs.getString("nombre");
+                String nombreCorto = nombre != null && nombre.length() > 16 ? nombre.substring(0,13) + "..." : (nombre != null ? nombre : "Desconocido");
+                Date fechaEsperada = rs.getDate("fecha_devolucion_esperada");
+                LocalDate fechaVencimiento = fechaEsperada.toLocalDate();
+                LocalDate hoy = LocalDate.now();
+                long diasRetraso = hoy.isAfter(fechaVencimiento) ? ChronoUnit.DAYS.between(fechaVencimiento, hoy) : 0;
+                String diasVencimientoStr = (diasRetraso > 0) ? diasRetraso + " días" : "Vigente";
+                
+                System.out.printf("| %2d | %-24s | %-16s | %-11s | %-11s | %14s |\n", 
+                    rs.getInt("id_prestamo"), tituloCorto, nombreCorto,
+                    rs.getDate("fecha_prestamo"), fechaEsperada, diasVencimientoStr);
+            }
+            if (!hayPrestamos) {
+                System.out.println("|                     No hay prestamos activos para devolver                     |");
+            }
+        } catch (SQLException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+        System.out.println("+----+--------------------------+------------------+-------------+-------------+----------------+");
+        
+        System.out.print("\nIngrese ID del prestamo a devolver: ");
+        int idPrestamo = scanner.nextInt();
+        
+        String checkSql = "SELECT id_material, id_usuario, fecha_devolucion_esperada FROM prestamos WHERE id_prestamo = ? AND estado = 'ACTIVO'";
+        int idMaterial = -1;
+        int idUsuario = -1;
+        Date fechaEsperada = null;
+        try (Connection conn = DatabaseConnection.getInstancia().getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
+            pstmt.setInt(1, idPrestamo);
+            ResultSet rs = pstmt.executeQuery();
+            if (!rs.next()) {
+                System.out.println("[ERROR] Prestamo no existe o ya fue devuelto.");
+                pausar();
+                return;
+            }
+            idMaterial = rs.getInt("id_material");
+            idUsuario = rs.getInt("id_usuario");
+            fechaEsperada = rs.getDate("fecha_devolucion_esperada");
+        } catch (SQLException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+            pausar();
+            return;
+        }
+        
+        long diasRetraso = ChronoUnit.DAYS.between(fechaEsperada.toLocalDate(), LocalDate.now());
+        if (diasRetraso < 0) diasRetraso = 0;
+        double mora = diasRetraso * configDAO.getMoraPorDia();
+        
+        System.out.println("\n--- RESUMEN DE DEVOLUCION ---");
+        System.out.println("ID Prestamo: " + idPrestamo);
+        System.out.println("Dias de retraso: " + diasRetraso);
+        System.out.println("Mora por dia: $" + configDAO.getMoraPorDia());
+        System.out.println("Mora a pagar: $" + String.format("%.2f", mora));
+        
+        System.out.print("\n¿Confirmar devolucion? (S/N): ");
+        String confirm = scanner.next().toUpperCase();
+        if (!confirm.equals("S")) {
+            System.out.println("Devolucion cancelada.");
+            pausar();
+            return;
+        }
+        
+        String sql = "UPDATE prestamos SET estado = 'DEVUELTO', fecha_devolucion_real = CURDATE(), mora_total = ? WHERE id_prestamo = ?";
+        try (Connection conn = DatabaseConnection.getInstancia().getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDouble(1, mora);
+            pstmt.setInt(2, idPrestamo);
+            if (pstmt.executeUpdate() > 0) {
+                materialDAO.aumentarDisponibilidad(idMaterial);
+                System.out.println("\n[OK] DEVOLUCION REGISTRADA EXITOSAMENTE");
+                System.out.println("Mora cobrada: $" + String.format("%.2f", mora));
+            } else {
+                System.out.println("[ERROR] No se pudo registrar la devolucion.");
             }
         } catch (SQLException e) {
             System.out.println("[ERROR] " + e.getMessage());
@@ -961,7 +1118,6 @@ public class Main {
         System.out.println("\n--- CREAR MATERIAL ---");
         scanner.nextLine();
         
-        // Mostrar tipos disponibles desde la BD
         List<String> tipos = tipoMaterialDAO.listarTipos();
         System.out.println("Seleccione el tipo de material:");
         for (int i = 0; i < tipos.size(); i++) {
@@ -1088,7 +1244,6 @@ public class Main {
         pausar();
     }
     
-    // ==================== CREAR USUARIO CORREGIDO ====================
     private static void crearUsuarioAdmin() {
         System.out.println("\n--- CREAR USUARIO ---");
         scanner.nextLine();
@@ -1106,7 +1261,6 @@ public class Main {
         System.out.print("Contraseña: ");
         String pass = scanner.nextLine().trim();
         
-        // Mostrar tipos de usuario desde la BD
         List<String> tipos = tipoUsuarioDAO.listarTipos();
         System.out.println("\nSeleccione el tipo de usuario (ingrese el número):");
         for (int i = 0; i < tipos.size(); i++) {
@@ -1119,7 +1273,7 @@ public class Main {
             tipoOpcion = scanner.nextInt();
         } catch (Exception e) {
             System.out.println("[ERROR] Debe ingresar un número válido.");
-            scanner.nextLine(); // limpiar buffer
+            scanner.nextLine();
             pausar();
             return;
         }
@@ -1138,7 +1292,7 @@ public class Main {
         System.out.print("Telefono (opcional): ");
         String telefono = scanner.nextLine().trim();
         
-        Usuario u = new Usuario();
+                Usuario u = new Usuario();
         u.setNombre(nombre);
         u.setEmail(email);
         u.setContrasena(pass);
