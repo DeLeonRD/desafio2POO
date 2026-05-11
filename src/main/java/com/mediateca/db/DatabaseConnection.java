@@ -32,7 +32,7 @@ public class DatabaseConnection {
             if (input == null) {
                 url = "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
                 user = "root";
-                password = "root123";
+                password = "323564.f";
                 return;
             }
             props.load(input);
