@@ -3,18 +3,136 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.dao.LibroDAO;
+import com.mediateca.model.Libro;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * ============================================================================
+ * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
+ *   jTextField1  -> Titulo               -> Libro.titulo       ✓ SE GUARDA
+ *   jTextField2  -> Año de Publicación   -> Libro.anio         ✓ SE GUARDA
+ *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
+ *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
+ *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField6  -> Estado               -> NO se guarda en BD
+ *   jTextField7  -> Fecha de Registro    -> NO se guarda en BD
+ *   jTextField8  -> Autor                -> Libro.autor        ✓ SE GUARDA
+ *   jTextField9  -> Editorial            -> NO se guarda en BD
+ *   jTextField10 -> ISBN                 -> NO se guarda en BD
+ *   jTextField11 -> Edición              -> NO se guarda en BD
+ *   jTextField12 -> Idioma               -> NO se guarda en BD
+ *   jTextField13 -> Categoría            -> NO se guarda en BD
+ *
+ *   jButton1 -> REGISTRAR
+ *   jButton2 -> LIMPIAR
+ *   jButton3 -> (acción libre, lo uso para "Volver al menú")
+ *
+ * LIMITACIÓN: el stored procedure `insertar_libro(titulo, autor, anio)` solo
+ * acepta 3 parámetros. Los demás campos del form están desconectados del
+ * backend; deberían eliminarse del form o ampliarse en BD + modelo + DAO.
+ * ============================================================================
  */
 public class Panel_ingresolibro extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_ingresolibro.class.getName());
+ 
+    private final LibroDAO libroDAO = new LibroDAO();
+ 
     /**
      * Creates new form Panel_ingresolibro
      */
     public Panel_ingresolibro() {
         initComponents();
+        cablearEventos();
+    }
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> registrar());      // REGISTRAR
+        jButton2.addActionListener(e -> limpiarCampos());  // LIMPIAR
+        jButton3.addActionListener(e -> volverAlMenu());   // VOLVER
+    }
+ 
+    /**
+     * Valida los 3 campos requeridos y guarda el libro vía stored procedure.
+     * Solo se persisten: titulo, autor, anio.
+     */
+    private void registrar() {
+        String titulo = jTextField1.getText().trim();
+        String autor  = jTextField8.getText().trim();
+        String anioTxt = jTextField2.getText().trim();
+ 
+        if (titulo.isEmpty() || autor.isEmpty() || anioTxt.isEmpty()) {
+            mostrarError("Título, autor y año son obligatorios.");
+            return;
+        }
+ 
+        int anio;
+        try {
+            anio = Integer.parseInt(anioTxt);
+        } catch (NumberFormatException ex) {
+            mostrarError("El año debe ser un número entero (ej: 2023).");
+            return;
+        }
+        if (anio < 1000 || anio > 9999) {
+            mostrarError("El año debe tener 4 dígitos.");
+            return;
+        }
+ 
+        try {
+            Libro libro = new Libro();
+            libro.setTitulo(titulo);
+            libro.setAutor(autor);
+            libro.setAnio(anio);
+ 
+            // Nota: LibroDAO.insertar() retorna void y atrapa errores internamente.
+            // No hay forma confiable de saber si la inserción tuvo éxito desde aquí.
+            // Si falla, el error aparece en la consola del backend.
+            libroDAO.insertar(libro);
+ 
+            JOptionPane.showMessageDialog(this,
+                "Operación de registro enviada al backend.\n" +
+                "Verifica en la BD que el libro fue creado.",
+                "Registro de libro", JOptionPane.INFORMATION_MESSAGE);
+            limpiarCampos();
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al registrar libro", ex);
+            mostrarError("Error inesperado: " + ex.getMessage());
+        }
+    }
+ 
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField6.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+        jTextField9.setText("");
+        jTextField10.setText("");
+        jTextField11.setText("");
+        jTextField12.setText("");
+        jTextField13.setText("");
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     /**

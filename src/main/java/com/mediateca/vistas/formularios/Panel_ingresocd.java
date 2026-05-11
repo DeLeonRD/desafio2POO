@@ -3,20 +3,136 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.dao.CdAudioDAO;
+import com.mediateca.model.CdAudio;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * ============================================================================
+ * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
+ *   jTextField1  -> Titulo               -> NO se guarda en BD
+ *   jTextField2  -> Sello Discográfico   -> NO se guarda en BD
+ *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
+ *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
+ *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField7  -> Estado               -> NO se guarda en BD
+ *   jTextField8  -> Fecha de Registro    -> NO se guarda en BD
+ *   jTextField9  -> Artista              -> CdAudio.artista     ✓ SE GUARDA
+ *   jTextField10 -> Género Musical       -> NO se guarda en BD
+ *   jTextField11 -> Número de Pistas     -> NO se guarda en BD
+ *   jTextField12 -> Universidad          -> NO se guarda en BD
+ *   jTextField13 -> Idioma               -> NO se guarda en BD
+ *
+ *   Nota: el form NO tiene un textfield para "Duración" aunque la label existe.
+ *         La label "Duracion_Minutos" no tiene textfield asociado en el form.
+ *         Por ahora se pide la duración con un input dialog.
+ *
+ *   jButton1 -> REGISTRAR
+ *   jButton2 -> LIMPIAR
+ *   jButton3 -> (acción libre, lo uso para "Volver al menú")
+ *
+ * LIMITACIÓN: el stored procedure `insertar_cd(artista, duracion)` solo
+ * acepta 2 parámetros. Los demás campos están desconectados del backend.
+ * ============================================================================
  */
 public class Panel_ingresocd extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_ingresocd.class.getName());
+ 
+    private final CdAudioDAO cdDAO = new CdAudioDAO();
+ 
     /**
      * Creates new form Panel_ingresolibro
      */
     public Panel_ingresocd() {
         initComponents();
+        cablearEventos();
     }
-
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> registrar());      // REGISTRAR
+        jButton2.addActionListener(e -> limpiarCampos());  // LIMPIAR
+        jButton3.addActionListener(e -> volverAlMenu());   // VOLVER
+    }
+ 
+    private void registrar() {
+        String artista = jTextField9.getText().trim();
+ 
+        if (artista.isEmpty()) {
+            mostrarError("El artista es obligatorio.");
+            return;
+        }
+ 
+        // Como el form no tiene textfield para duración, lo pedimos por dialog.
+        String duracionTxt = JOptionPane.showInputDialog(this,
+            "Duración del CD en minutos:", "Duración",
+            JOptionPane.QUESTION_MESSAGE);
+        if (duracionTxt == null) return; // usuario canceló
+        duracionTxt = duracionTxt.trim();
+ 
+        int duracion;
+        try {
+            duracion = Integer.parseInt(duracionTxt);
+        } catch (NumberFormatException ex) {
+            mostrarError("La duración debe ser un número entero (minutos).");
+            return;
+        }
+        if (duracion <= 0) {
+            mostrarError("La duración debe ser mayor a 0.");
+            return;
+        }
+ 
+        try {
+            CdAudio cd = new CdAudio();
+            cd.setArtista(artista);
+            cd.setDuracion(duracion);
+ 
+            cdDAO.insertar(cd);
+ 
+            JOptionPane.showMessageDialog(this,
+                "Operación de registro enviada al backend.\n" +
+                "Verifica en la BD que el CD fue creado.",
+                "Registro de CD", JOptionPane.INFORMATION_MESSAGE);
+            limpiarCampos();
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al registrar CD", ex);
+            mostrarError("Error inesperado: " + ex.getMessage());
+        }
+    }
+ 
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+        jTextField9.setText("");
+        jTextField10.setText("");
+        jTextField11.setText("");
+        jTextField12.setText("");
+        jTextField13.setText("");
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+ 
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

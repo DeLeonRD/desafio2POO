@@ -3,20 +3,135 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.dao.DvdDAO;
+import com.mediateca.model.Dvd;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * ============================================================================
+ * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
+ *   jTextField1  -> Titulo               -> NO se guarda en BD
+ *   jTextField2  -> Año de Publicación   -> NO se guarda en BD
+ *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
+ *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
+ *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField7  -> Estado               -> NO se guarda en BD
+ *   jTextField8  -> Fecha de Registro    -> NO se guarda en BD
+ *   jTextField9  -> Director             -> Dvd.director       ✓ SE GUARDA
+ *   jTextField10 -> Género               -> NO se guarda en BD
+ *   jTextField11 -> Formato              -> NO se guarda en BD
+ *   jTextField12 -> Productora           -> NO se guarda en BD
+ *   jTextField13 -> Idioma               -> NO se guarda en BD
+ *
+ *   Nota: el form NO tiene textfield para "Duración" aunque la label existe.
+ *         Por ahora se pide la duración con un input dialog.
+ *
+ *   jButton1 -> REGISTRAR
+ *   jButton2 -> LIMPIAR
+ *   jButton3 -> (acción libre, lo uso para "Volver al menú")
+ *
+ * LIMITACIÓN: el stored procedure `insertar_dvd(director, duracion)` solo
+ * acepta 2 parámetros. Los demás campos están desconectados del backend.
+ * ============================================================================
  */
 public class Panel_ingresodvd extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_ingresodvd.class.getName());
+ 
+    private final DvdDAO dvdDAO = new DvdDAO();
+ 
     /**
      * Creates new form Panel_ingresolibro
      */
     public Panel_ingresodvd() {
         initComponents();
+        cablearEventos();
     }
-
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> registrar());      // REGISTRAR
+        jButton2.addActionListener(e -> limpiarCampos());  // LIMPIAR
+        jButton3.addActionListener(e -> volverAlMenu());   // VOLVER
+    }
+ 
+    private void registrar() {
+        String director = jTextField9.getText().trim();
+ 
+        if (director.isEmpty()) {
+            mostrarError("El director es obligatorio.");
+            return;
+        }
+ 
+        // Como el form no tiene textfield para duración, lo pedimos por dialog.
+        String duracionTxt = JOptionPane.showInputDialog(this,
+            "Duración del DVD en minutos:", "Duración",
+            JOptionPane.QUESTION_MESSAGE);
+        if (duracionTxt == null) return; // usuario canceló
+        duracionTxt = duracionTxt.trim();
+ 
+        int duracion;
+        try {
+            duracion = Integer.parseInt(duracionTxt);
+        } catch (NumberFormatException ex) {
+            mostrarError("La duración debe ser un número entero (minutos).");
+            return;
+        }
+        if (duracion <= 0) {
+            mostrarError("La duración debe ser mayor a 0.");
+            return;
+        }
+ 
+        try {
+            Dvd dvd = new Dvd();
+            dvd.setDirector(director);
+            dvd.setDuracion(duracion);
+ 
+            dvdDAO.insertar(dvd);
+ 
+            JOptionPane.showMessageDialog(this,
+                "Operación de registro enviada al backend.\n" +
+                "Verifica en la BD que el DVD fue creado.",
+                "Registro de DVD", JOptionPane.INFORMATION_MESSAGE);
+            limpiarCampos();
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al registrar DVD", ex);
+            mostrarError("Error inesperado: " + ex.getMessage());
+        }
+    }
+ 
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+        jTextField9.setText("");
+        jTextField10.setText("");
+        jTextField11.setText("");
+        jTextField12.setText("");
+        jTextField13.setText("");
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+ 
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

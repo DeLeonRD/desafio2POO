@@ -1,22 +1,125 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package com.mediateca.vistas.busquedas;
-
+ 
+import com.mediateca.dao.DocumentoDAO;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * Panel de búsqueda de materiales (libros, revistas, CDs, DVDs, tesis).
+ * Filtros disponibles: título (LIKE), tipo (combobox) y código/ID.
+ * Los resultados se muestran en el JTable.
+ *
+ * Nota: los botones "Modificar" (5 de ellos en el form) y los botones
+ * tipo jButton6/7/8 quedan SIN cablear porque la funcionalidad de modificar
+ * material desde la búsqueda requiere paneles de edición que aún no existen.
  */
 public class Panel_BuscaMat extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_BuscaMat.class.getName());
+ 
+    private static final String[] COLUMNAS = {
+        "ID", "Tipo", "Título", "Autor", "Año", "Ubicación", "Total", "Disponibles"
+    };
+ 
+    private final DocumentoDAO documentoDAO = new DocumentoDAO();
+ 
     /**
      * Creates new form Panel_BuscaMat
      */
     public Panel_BuscaMat() {
         initComponents();
+        configurarTabla();
+        cablearEventos();
     }
-
+ 
+    /** Reemplaza el modelo placeholder por uno con columnas reales y filas vacías. */
+    private void configurarTabla() {
+        DefaultTableModel modelo = new DefaultTableModel(COLUMNAS, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // la tabla es solo de lectura
+            }
+        };
+        jTable1.setModel(modelo);
+    }
+ 
+    private void cablearEventos() {
+        boton_buscar_material_tabla.addActionListener(e -> buscar());
+        boton_limpiar_campos.addActionListener(e -> limpiar());
+        boton_regresar_menu_anterior.addActionListener(e -> volverAlMenu());
+ 
+        // Los botones "Modificar" del form no tienen funcionalidad de backend
+        // todavía. Muestran un aviso para no dejar al usuario sin feedback.
+        java.awt.event.ActionListener pendiente = e -> JOptionPane.showMessageDialog(
+            this,
+            "Funcionalidad de modificar material aún no implementada.",
+            "Pendiente", JOptionPane.INFORMATION_MESSAGE);
+        botn_modificar_primerelementolista.addActionListener(pendiente);
+        botn_modificar_segndoelementolista.addActionListener(pendiente);
+        jButton6.addActionListener(pendiente);
+        jButton7.addActionListener(pendiente);
+        jButton8.addActionListener(pendiente);
+    }
+ 
+    /** Ejecuta la búsqueda con los filtros llenos y vuelca el resultado a la tabla. */
+    private void buscar() {
+        String titulo = campo_titulomaterial_busqueda.getText().trim();
+        String tipo   = (String) combobox_selecciónmaterial_busqueda.getSelectedItem();
+        String codTxt = campo_codigomaterial_busqueda.getText().trim();
+ 
+        int idMaterial = -1;
+        if (!codTxt.isEmpty()) {
+            try {
+                idMaterial = Integer.parseInt(codTxt);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this,
+                    "El código debe ser un número entero.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+ 
+        try {
+            List<Object[]> filas = documentoDAO.buscarMateriales(titulo, tipo, idMaterial);
+ 
+            DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+            modelo.setRowCount(0); // limpiar tabla
+            for (Object[] fila : filas) {
+                modelo.addRow(fila);
+            }
+ 
+            if (filas.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "No se encontraron materiales con esos filtros.",
+                    "Sin resultados", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al buscar materiales", ex);
+            JOptionPane.showMessageDialog(this,
+                "Error al consultar la BD: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    private void limpiar() {
+        campo_titulomaterial_busqueda.setText("");
+        campo_codigomaterial_busqueda.setText("");
+        combobox_selecciónmaterial_busqueda.setSelectedIndex(0);
+        ((DefaultTableModel) jTable1.getModel()).setRowCount(0);
+        campo_titulomaterial_busqueda.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

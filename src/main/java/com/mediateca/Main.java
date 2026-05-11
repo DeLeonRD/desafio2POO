@@ -1,5 +1,5 @@
 package com.mediateca;
-
+//Prueba de comentario
 import com.mediateca.db.DatabaseConnection;
 import com.mediateca.vistas.Ventana_PPAL;
 

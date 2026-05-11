@@ -3,20 +3,202 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.controller.PrestamoController;
+import com.mediateca.db.DatabaseConnection;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * Flujo del panel:
+ *   1. Usuario ingresa el carnet (id_usuario) y clic en BUSCAR -> carga sus
+ *      préstamos activos/vencidos en la tabla.
+ *   2. Usuario selecciona una fila y hace clic en "Seleccionar" -> calcula
+ *      días de retraso y costo de mora, los muestra en los campos inferiores.
+ *
+ *   jTextField1 -> Carnet (id_usuario)
+ *   jTextField2 -> Días de Mora (output, no editable)
+ *   jLabel5     -> Costo de Mora (output)
+ *   jTable1     -> Préstamos del usuario
+ *   jButton1    -> BUSCAR
+ *   jButton5, jButton6, jButton7 -> Seleccionar (los 3 hacen lo mismo: calcular
+ *                                                mora para la fila seleccionada)
  */
 public class Panel_Calcular_Mora extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_Calcular_Mora.class.getName());
+ 
+    private static final String[] COLUMNAS = {
+        "ID Préstamo", "ID Material", "Título", "Fecha Préstamo",
+        "Fecha Devolución Esperada", "Estado"
+    };
+ 
+    private final PrestamoController prestamoController = new PrestamoController();
+ 
     /**
      * Creates new form Panel_Calcular_Mora
      */
     public Panel_Calcular_Mora() {
         initComponents();
+        configurarTabla();
+        jTextField2.setEditable(false);
+        jLabel5.setText(""); // limpiar placeholder "jLabel5"
+        cablearEventos();
     }
-
+ 
+    private void configurarTabla() {
+        DefaultTableModel modelo = new DefaultTableModel(COLUMNAS, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        jTable1.setModel(modelo);
+    }
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> buscarPrestamos());
+ 
+        // Los 3 botones "Seleccionar" hacen lo mismo: calcular mora para la
+        // fila actualmente seleccionada en la tabla.
+        java.awt.event.ActionListener calcularSelec = e -> calcularMoraDeSeleccionada();
+        jButton5.addActionListener(calcularSelec);
+        jButton6.addActionListener(calcularSelec);
+        jButton7.addActionListener(calcularSelec);
+    }
+ 
+    /**
+     * Carga en la tabla los préstamos activos y vencidos del usuario.
+     */
+    private void buscarPrestamos() {
+        String carnetTxt = jTextField1.getText().trim();
+        if (carnetTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Ingresa el carnet (id de usuario).",
+                "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+ 
+        int idUsuario;
+        try {
+            idUsuario = Integer.parseInt(carnetTxt);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this,
+                "El carnet debe ser numérico.",
+                "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+ 
+        DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+        modelo.setRowCount(0);
+        jTextField2.setText("");
+        jLabel5.setText("");
+ 
+        String sql = "SELECT p.id_prestamo, p.id_material, m.titulo, " +
+                     "       p.fecha_prestamo, p.fecha_devolucion_esperada, p.estado " +
+                     "FROM prestamos p " +
+                     "JOIN material m ON m.id = p.id_material " +
+                     "WHERE p.id_usuario = ? AND p.estado IN ('ACTIVO', 'VENCIDO') " +
+                     "ORDER BY p.fecha_devolucion_esperada";
+        try (Connection conn = DatabaseConnection.getInstancia().getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, idUsuario);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                int count = 0;
+                while (rs.next()) {
+                    modelo.addRow(new Object[]{
+                        rs.getInt("id_prestamo"),
+                        rs.getInt("id_material"),
+                        rs.getString("titulo"),
+                        rs.getDate("fecha_prestamo"),
+                        rs.getDate("fecha_devolucion_esperada"),
+                        rs.getString("estado")
+                    });
+                    count++;
+                }
+                if (count == 0) {
+                    JOptionPane.showMessageDialog(this,
+                        "El usuario no tiene préstamos activos.",
+                        "Sin préstamos", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Error al buscar préstamos del usuario", ex);
+            JOptionPane.showMessageDialog(this,
+                "Error de BD: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    /**
+     * Toma la fila seleccionada del JTable y calcula la mora usando
+     * {@link PrestamoController#calcularMora}.
+     */
+    private void calcularMoraDeSeleccionada() {
+        int fila = jTable1.getSelectedRow();
+        if (fila < 0) {
+            JOptionPane.showMessageDialog(this,
+                "Selecciona una fila de la tabla primero.",
+                "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+ 
+        try {
+            DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+            int idPrestamo = (Integer) modelo.getValueAt(fila, 0);
+            int idMaterial = (Integer) modelo.getValueAt(fila, 1);
+            Object fechaObj = modelo.getValueAt(fila, 4); // Fecha Devolución Esperada
+ 
+            // El ResultSet devuelve java.sql.Date — lo convertimos a LocalDate
+            // para los días de retraso, y lo pasamos directo al controller.
+            Date fechaSQL;
+            LocalDate fechaEsperada;
+            if (fechaObj instanceof Date) {
+                fechaSQL = (Date) fechaObj;
+                fechaEsperada = fechaSQL.toLocalDate();
+            } else if (fechaObj instanceof java.util.Date) {
+                fechaSQL = new Date(((java.util.Date) fechaObj).getTime());
+                fechaEsperada = fechaSQL.toLocalDate();
+            } else {
+                throw new IllegalStateException("Tipo de fecha inesperado: " + fechaObj.getClass());
+            }
+ 
+            LocalDate hoy = LocalDate.now();
+            long diasRetraso = hoy.isAfter(fechaEsperada)
+                ? ChronoUnit.DAYS.between(fechaEsperada, hoy) : 0;
+ 
+            double mora = prestamoController.calcularMora(idPrestamo, idMaterial, fechaSQL);
+ 
+            jTextField2.setText(String.valueOf(diasRetraso));
+            jLabel5.setText(String.format("$%.2f", mora));
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al calcular mora", ex);
+            JOptionPane.showMessageDialog(this,
+                "Error al calcular mora: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    @SuppressWarnings("unused")
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

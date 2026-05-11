@@ -3,20 +3,145 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.dao.LibroDAO;
+import com.mediateca.model.Libro;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * ============================================================================
+ * IMPORTANTE — TESIS NO TIENE BACKEND PROPIO
+ *
+ * El backend (modelos, DAOs, stored procedures, tablas) NO incluye soporte
+ * para tesis. Para no dejar este form muerto, se persiste como un Libro
+ * con los campos básicos (titulo, autor, año). El resto de los datos
+ * específicos de tesis (asesor, grado, universidad, carrera, etc.) NO
+ * se guardan en BD.
+ *
+ * Si el equipo backend agrega más adelante un TesisDAO con su tabla, hay
+ * que reemplazar LibroDAO por TesisDAO aquí.
+ *
+ * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
+ *   jTextField1  -> Titulo               -> Libro.titulo       ✓ SE GUARDA
+ *   jTextField2  -> Año Defensa          -> Libro.anio         ✓ SE GUARDA
+ *   jTextField3  -> Ubicación Física     -> NO se guarda
+ *   jTextField4  -> Total de Ejemplares  -> NO se guarda
+ *   jTextField5  -> Disponibilidad       -> NO se guarda
+ *   jTextField6  -> Estado               -> NO se guarda
+ *   jTextField7  -> Fecha de Registro    -> NO se guarda
+ *   jTextField8  -> Autor                -> Libro.autor        ✓ SE GUARDA
+ *   jTextField9  -> Asesor               -> NO se guarda
+ *   jTextField10 -> Grado Académico      -> NO se guarda
+ *   jTextField11 -> Universidad          -> NO se guarda
+ *   jTextField12 -> Idioma               -> NO se guarda
+ *   jTextField13 -> Carrera              -> NO se guarda
+ *   jTextField14 -> Número de Páginas    -> NO se guarda
+ *   (label "Año de Publicación"          -> sin textfield asociado)
+ *
+ *   jButton1 -> REGISTRAR
+ *   jButton2 -> LIMPIAR
+ *   jButton3 -> CANCELAR
+ * ============================================================================
  */
 public class Panel_ingresotesis extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_ingresotesis.class.getName());
+ 
+    // Tesis se guarda como Libro porque el backend no tiene TesisDAO.
+    private final LibroDAO libroDAO = new LibroDAO();
+ 
     /**
      * Creates new form Panel_ingresolibro
      */
     public Panel_ingresotesis() {
         initComponents();
+        cablearEventos();
     }
-
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> registrar());      // REGISTRAR
+        jButton2.addActionListener(e -> limpiarCampos());  // LIMPIAR
+        jButton3.addActionListener(e -> volverAlMenu());   // CANCELAR
+    }
+ 
+    private void registrar() {
+        String titulo  = jTextField1.getText().trim();
+        String autor   = jTextField8.getText().trim();
+        String anioTxt = jTextField2.getText().trim();   // Año Defensa
+ 
+        if (titulo.isEmpty() || autor.isEmpty() || anioTxt.isEmpty()) {
+            mostrarError("Título, autor y año de defensa son obligatorios.");
+            return;
+        }
+ 
+        int anio;
+        try {
+            anio = Integer.parseInt(anioTxt);
+        } catch (NumberFormatException ex) {
+            mostrarError("El año de defensa debe ser un número entero.");
+            return;
+        }
+        if (anio < 1000 || anio > 9999) {
+            mostrarError("El año debe tener 4 dígitos.");
+            return;
+        }
+ 
+        try {
+            // La tesis se guarda como Libro hasta que exista TesisDAO en el backend.
+            Libro libro = new Libro();
+            libro.setTitulo(titulo);
+            libro.setAutor(autor);
+            libro.setAnio(anio);
+ 
+            libroDAO.insertar(libro);
+ 
+            JOptionPane.showMessageDialog(this,
+                "Operación de registro enviada al backend.\n\n" +
+                "AVISO: la tesis se guardó como Libro porque el backend no\n" +
+                "tiene soporte específico para tesis. Solo se persistieron:\n" +
+                "  - Título, Autor, Año de Defensa\n\n" +
+                "El resto de los campos (asesor, universidad, etc.) no se guardó.",
+                "Registro de tesis", JOptionPane.WARNING_MESSAGE);
+            limpiarCampos();
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al registrar tesis", ex);
+            mostrarError("Error inesperado: " + ex.getMessage());
+        }
+    }
+ 
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField6.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+        jTextField9.setText("");
+        jTextField10.setText("");
+        jTextField11.setText("");
+        jTextField12.setText("");
+        jTextField13.setText("");
+        jTextField14.setText("");
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

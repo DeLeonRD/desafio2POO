@@ -3,19 +3,122 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.formularios;
-
+ 
+import com.mediateca.dao.RevistaDAO;
+import com.mediateca.model.Revista;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * ============================================================================
+ * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
+ *   jTextField1  -> Titulo               -> Revista.nombre     ✓ SE GUARDA
+ *   jTextField2  -> Año de Publicación   -> NO se guarda en BD
+ *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
+ *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
+ *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField6  -> Volumen              -> NO se guarda en BD
+ *   jTextField7  -> Fecha de Registro    -> NO se guarda en BD
+ *   jTextField8  -> Idioma               -> NO se guarda en BD
+ *   jTextField9  -> ISSN                 -> NO se guarda en BD
+ *   jTextField10 -> Periodicidad         -> NO se guarda en BD
+ *   jTextField11 -> Número                -> Revista.edicion    ✓ SE GUARDA
+ *   jTextField12 -> Fecha de Publicación -> NO se guarda en BD
+ *
+ *   jButton1 -> REGISTRAR
+ *   jButton2 -> LIMPIAR
+ *   jButton3 -> (acción libre, lo uso para "Volver al menú")
+ *
+ * LIMITACIÓN: el stored procedure `insertar_revista(nombre, edicion)` solo
+ * acepta 2 parámetros. Los demás campos están desconectados del backend.
+ * ============================================================================
  */
 public class Panel_ingresorevista extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_ingresorevista.class.getName());
+ 
+    private final RevistaDAO revistaDAO = new RevistaDAO();
+ 
     /**
      * Creates new form Panel_ingresolibro
      */
     public Panel_ingresorevista() {
         initComponents();
+        cablearEventos();
     }
+ 
+    private void cablearEventos() {
+        jButton1.addActionListener(e -> registrar());      // REGISTRAR
+        jButton2.addActionListener(e -> limpiarCampos());  // LIMPIAR
+        jButton3.addActionListener(e -> volverAlMenu());   // VOLVER
+    }
+ 
+    private void registrar() {
+        String nombre = jTextField1.getText().trim();   // Titulo
+        String numTxt = jTextField11.getText().trim();  // Número (edicion)
+ 
+        if (nombre.isEmpty() || numTxt.isEmpty()) {
+            mostrarError("Título y número son obligatorios.");
+            return;
+        }
+ 
+        int edicion;
+        try {
+            edicion = Integer.parseInt(numTxt);
+        } catch (NumberFormatException ex) {
+            mostrarError("El número debe ser un entero.");
+            return;
+        }
+ 
+        try {
+            Revista revista = new Revista();
+            revista.setNombre(nombre);
+            revista.setEdicion(edicion);
+ 
+            revistaDAO.insertar(revista);
+ 
+            JOptionPane.showMessageDialog(this,
+                "Operación de registro enviada al backend.\n" +
+                "Verifica en la BD que la revista fue creada.",
+                "Registro de revista", JOptionPane.INFORMATION_MESSAGE);
+            limpiarCampos();
+ 
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al registrar revista", ex);
+            mostrarError("Error inesperado: " + ex.getMessage());
+        }
+    }
+ 
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField6.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+        jTextField9.setText("");
+        jTextField10.setText("");
+        jTextField11.setText("");
+        jTextField12.setText("");
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+ 
 
     /**
      * This method is called from within the constructor to initialize the form.

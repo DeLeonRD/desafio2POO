@@ -3,19 +3,125 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.busquedas;
-
+ 
+import com.mediateca.dao.PrestamoDAO;
+import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Ventana_PPAL;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+ 
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
+ *
+ * Panel de búsqueda de préstamos. Filtros:
+ *   jTextField1 -> CARNET (se interpreta como id_usuario numérico)
+ *   jTextField2 -> NOMBRE (LIKE sobre nombre del usuario)
+ *   jComboBox1  -> Tipo de material
+ *
+ * Nota: el form tiene 5 botones "Modificar" sin funcionalidad de backend.
+ * Los conecto a un aviso "Pendiente" para no dejarlos muertos.
  */
 public class Panel_BuscaPest extends javax.swing.JPanel {
-
+ 
+    private static final Logger logger = Logger.getLogger(Panel_BuscaPest.class.getName());
+ 
+    private static final String[] COLUMNAS = {
+        "ID Préstamo", "ID Usuario", "Nombre", "Tipo", "Título",
+        "Fecha Préstamo", "Fecha Devolución", "Estado", "Mora"
+    };
+ 
+    private final PrestamoDAO prestamoDAO = new PrestamoDAO();
+ 
     /**
      * Creates new form Panel_BuscaMat
      */
     public Panel_BuscaPest() {
         initComponents();
+        configurarTabla();
+        cablearEventos();
     }
+ 
+    private void configurarTabla() {
+        DefaultTableModel modelo = new DefaultTableModel(COLUMNAS, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        jTable1.setModel(modelo);
+    }
+ 
+    private void cablearEventos() {
+        boton_buscar_prestamo_tabla.addActionListener(e -> buscar());
+        boton_limpiarcampos.addActionListener(e -> limpiar());
+        boton_regresar_menu.addActionListener(e -> volverAlMenu());
+ 
+        java.awt.event.ActionListener pendiente = e -> JOptionPane.showMessageDialog(
+            this,
+            "Funcionalidad de modificar préstamo aún no implementada.",
+            "Pendiente", JOptionPane.INFORMATION_MESSAGE);
+        jButton4.addActionListener(pendiente);
+        jButton5.addActionListener(pendiente);
+        jButton6.addActionListener(pendiente);
+        jButton7.addActionListener(pendiente);
+        jButton8.addActionListener(pendiente);
+    }
+ 
+    private void buscar() {
+        String carnetTxt = jTextField1.getText().trim();
+        String nombre    = jTextField2.getText().trim();
+        String tipo      = (String) jComboBox1.getSelectedItem();
+ 
+        int idUsuario = -1;
+        if (!carnetTxt.isEmpty()) {
+            try {
+                idUsuario = Integer.parseInt(carnetTxt);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this,
+                    "El carnet debe ser un número (id de usuario).",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+ 
+        try {
+            List<Object[]> filas = prestamoDAO.buscarPrestamos(idUsuario, nombre, tipo);
+ 
+            DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+            modelo.setRowCount(0);
+            for (Object[] fila : filas) {
+                modelo.addRow(fila);
+            }
+ 
+            if (filas.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "No se encontraron préstamos con esos filtros.",
+                    "Sin resultados", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error al buscar préstamos", ex);
+            JOptionPane.showMessageDialog(this,
+                "Error al consultar la BD: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    private void limpiar() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jComboBox1.setSelectedIndex(0);
+        ((DefaultTableModel) jTable1.getModel()).setRowCount(0);
+        jTextField1.requestFocus();
+    }
+ 
+    private void volverAlMenu() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+    }
+ 
 
     /**
      * This method is called from within the constructor to initialize the form.
