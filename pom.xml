@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <exec.mainClass>com.mediateca.Main</exec.mainClass>
+        <exec.mainClass>com.mediateca.vistas.Ventana_PPAL</exec.mainClass>
     </properties>
 
     <dependencies>
@@ -52,7 +52,21 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.1</version>
                 <configuration>
-                    <mainClass>com.mediateca.Main</mainClass>
+                    <mainClass>com.mediateca.vistas.Ventana_PPAL</mainClass>
+                </configuration>
+            </plugin>
+
+            <!-- Plugin para crear JAR ejecutable con manifiesto -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.mediateca.vistas.Ventana_PPAL</mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
