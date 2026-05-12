@@ -27,37 +27,45 @@ Sistema de gestión de préstamos para una mediateca que permite:
 - Préstamos y devoluciones con cálculo automático de mora
 - Configuración dinámica de tipos de materiales y usuarios
 - Configuración de mora por día y días de préstamo por tipo
-- ** Reporte de disponibilidad de materiales** 
----
-
-
-##  Tecnologías Utilizadas
-
-| Tecnología | Versión | Uso |
-|------------|---------|-----|
-| Java | 17 | Lenguaje principal |
-| Maven | 3.9.x | Gestión de dependencias |
-| MySQL | 8.0 | Base de datos |
-| Git | - | Control de versiones |
-| Swing | - | Interfaz gráfica |
+- ** Reporte de disponibilidad de materiales** (NUEVO)
 
 ---
 
-##  Dependencias (pom.xml)
+---
 
-```xml
-<dependencies>
-    <!-- MySQL Connector -->
-    <dependency>
-        <groupId>com.mysql</groupId>
-        <artifactId>mysql-connector-j</artifactId>
-        <version>8.1.0</version>
-    </dependency>
-    
-    <!-- BCrypt para encriptación de contraseñas -->
-    <dependency>
-        <groupId>org.mindrot</groupId>
-        <artifactId>jbcrypt</artifactId>
-        <version>0.4</version>
-    </dependency>
-</dependencies>
+## 📋 Requisitos previos (instalar UNA SOLA VEZ)
+
+Antes de ejecutar el proyecto, **debes tener instalado**:
+
+| Requisito | Versión | Enlace de descarga |
+|-----------|---------|---------------------|
+| Java JDK | 17 o superior | [Adoptium](https://adoptium.net/) |
+| MySQL Server | 8.0 o superior | [MySQL Community Server](https://dev.mysql.com/downloads/mysql/) |
+
+###  Configuración de MySQL
+
+La contraseña del usuario `root` de MySQL **debe ser `323564.f`** para que el script funcione automáticamente.
+
+Si tu MySQL tiene otra contraseña, edita el archivo `ejecutar.bat` y cambia `-p323564.f` por `-pTU_CONTRASEÑA` en todas las líneas donde aparece.
+
+---
+
+##  Instalación y Ejecución
+
+### Opción 1: Automática (Recomendada - Solo Windows)
+
+1. **Descomprimir** el archivo ZIP del proyecto
+2. **Hacer doble clic** en el archivo `ejecutar.bat`
+3. El script verificará los requisitos, creará la base de datos e iniciará el programa automáticamente
+
+### Opción 2: Manual
+
+```bash
+# 1. Crear la base de datos
+mysql -u root -p323564.f -e "CREATE DATABASE IF NOT EXISTS mediateca;"
+
+# 2. Importar los datos de prueba
+mysql -u root -p323564.f mediateca < mediateca_con_pruebas.sql
+
+# 3. Compilar y ejecutar
+mvn clean compile exec:java -Dexec.mainClass="com.mediateca.vistas.Ventana_PPAL"
