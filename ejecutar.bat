@@ -20,16 +20,6 @@ if errorlevel 1 (
 )
 echo [OK] Java encontrado
 
-REM Verificar Maven
-mvn -version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Maven no encontrado. Instale Maven.
-    echo Descargar de: https://maven.apache.org/download.cgi
-    pause
-    exit /b 1
-)
-echo [OK] Maven encontrado
-
 REM Verificar MySQL
 echo Verificando conexion a MySQL...
 mysql -u root -p323564.f -e "SELECT 1" >nul 2>&1
@@ -50,10 +40,11 @@ echo Importando datos...
 mysql -u root -p323564.f mediateca < mediateca_con_pruebas.sql 2>nul
 
 echo.
-echo Compilando y ejecutando el proyecto...
+echo Ejecutando el proyecto...
 echo.
 
-mvn clean compile exec:java -Dexec.mainClass="com.mediateca.vistas.Ventana_PPAL"
+REM Ejecutar el JAR directamente
+java -jar target/ProyectoJava-1.0-SNAPSHOT.jar
 
 echo.
 echo Programa finalizado.
