@@ -3,257 +3,190 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas;
- 
+
 import javax.swing.JOptionPane;
-import com.mediateca.vistas.busquedas.Panel_BuscaMat;
 import com.mediateca.vistas.busquedas.Panel_BuscaPest;
-import com.mediateca.vistas.busquedas.Panel_restablecer;
-import com.mediateca.vistas.formularios.Panel_Calcular_Mora;
-import com.mediateca.vistas.formularios.Panel_ingresoadmin;
-import com.mediateca.vistas.formularios.Panel_ingresoalumno;
-import com.mediateca.vistas.formularios.Panel_ingresocd;
-import com.mediateca.vistas.formularios.Panel_ingresodocente;
-import com.mediateca.vistas.formularios.Panel_ingresodvd;
-import com.mediateca.vistas.formularios.Panel_ingresolibro;
-import com.mediateca.vistas.formularios.Panel_ingresorevista;
-import com.mediateca.vistas.formularios.Panel_ingresotesis;
- 
-/**
- *
- * @author Francisco De la O Gonzalez - DG200722
- */
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+
 public class Panel_administrador extends javax.swing.JPanel {
- 
-    /**
-     * Creates new form Panel_Admin
-     */
+
     public Panel_administrador() {
         initComponents();
         cablearEventos();
     }
- 
+
     private void cablearEventos() {
-        boton_nuevo_user.addActionListener(e -> abrirIngresoUsuario());
-        boton_nuevo_material.addActionListener(e -> abrirIngresoMaterial());
-        boton_buscar_material.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaMat()));
+        btnGestionUsuarios.addActionListener(e -> abrirGestionUsuarios());
+        btnGestionMateriales.addActionListener(e -> abrirGestionMateriales());
         boton_busca_prestam.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaPest()));
-        boton_calcularmora.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_Calcular_Mora()));
-        boton_restablecer_contra.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_restablecer()));
         boton_configadmin.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_Configadmin()));
+        btnReporteDisponibilidad.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_ReporteDisponibilidad()));
+        btnCerrarSesion.addActionListener(e -> cerrarSesion());
     }
- 
-    /** Pregunta qué tipo de usuario crear y abre el formulario correspondiente. */
-    private void abrirIngresoUsuario() {
-        String[] opciones = { "Administrador", "Docente", "Alumno" };
-        int eleccion = JOptionPane.showOptionDialog(this,
-            "¿Qué tipo de usuario desea ingresar?",
-            "Nuevo Usuario",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-            null, opciones, opciones[2]);
-        switch (eleccion) {
-            case 0: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresoadmin()); break;
-            case 1: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresodocente()); break;
-            case 2: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresoalumno()); break;
-            default: break;
-        }
+
+    private void abrirGestionUsuarios() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_GestionUsuarios());
     }
- 
-    /** Pregunta qué tipo de material y abre el formulario correspondiente. */
-    private void abrirIngresoMaterial() {
-        String[] opciones = { "Libro", "Revista", "CD", "DVD", "Tesis" };
-        int eleccion = JOptionPane.showOptionDialog(this,
-            "¿Qué tipo de material desea ingresar?",
-            "Nuevo Material",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-            null, opciones, opciones[0]);
-        switch (eleccion) {
-            case 0: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresolibro()); break;
-            case 1: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresorevista()); break;
-            case 2: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresocd()); break;
-            case 3: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresodvd()); break;
-            case 4: Ventana_PPAL.getInstancia().mostrar(new Panel_ingresotesis()); break;
-            default: break;
+
+    private void abrirGestionMateriales() {
+        Ventana_PPAL.getInstancia().mostrar(new Panel_GestionMateriales());
+    }
+
+    private void cerrarSesion() {
+        com.mediateca.util.SessionManager.cerrarSesion();
+        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
+        if (ventana != null) {
+            ventana.mostrar(new Panel_Bienvenida());
         }
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
-        boton_nuevo_user = new javax.swing.JButton();
-        boton_nuevo_material = new javax.swing.JButton();
-        boton_buscar_material = new javax.swing.JButton();
-        boton_restablecer_contra = new javax.swing.JButton();
+        pnlMenu = new javax.swing.JPanel();
+        pnlContenido = new javax.swing.JPanel();
+        lblTitulo = new javax.swing.JLabel();
+        lblSubtitulo = new javax.swing.JLabel();
+        lblBienvenida = new javax.swing.JLabel();
+        lblDescripcion = new javax.swing.JLabel();
         boton_busca_prestam = new javax.swing.JButton();
-        boton_calcularmora = new javax.swing.JButton();
         boton_configadmin = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jPanel2 = new javax.swing.JPanel();
+        btnGestionUsuarios = new javax.swing.JButton();
+        btnGestionMateriales = new javax.swing.JButton();
+        btnReporteDisponibilidad = new javax.swing.JButton();
+        btnCerrarSesion = new javax.swing.JButton();
 
-        setBackground(new java.awt.Color(11, 19, 43));
-        setForeground(new java.awt.Color(255, 255, 255));
+        setBackground(new Color(5, 15, 45));
+        setLayout(new BorderLayout());
 
-        jPanel1.setBackground(new java.awt.Color(11, 19, 43));
-        jPanel1.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(204, 204, 204), 1, true));
+        pnlMenu.setBackground(new Color(5, 15, 45));
+        pnlMenu.setPreferredSize(new Dimension(300, 720));
+        pnlMenu.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 25, 10, 25);
 
-        boton_nuevo_user.setText("Ingresar");
-        boton_nuevo_user.setName("boton_nuevo_user"); // NOI18N
-        boton_nuevo_user.addActionListener(this::boton_nuevo_userActionPerformed);
+        javax.swing.JPanel panelSuperior = new javax.swing.JPanel();
+        panelSuperior.setLayout(new GridBagLayout());
+        panelSuperior.setBackground(new Color(5, 15, 45));
+        GridBagConstraints gbcSuperior = new GridBagConstraints();
+        gbcSuperior.gridx = 0;
+        gbcSuperior.fill = GridBagConstraints.HORIZONTAL;
+        gbcSuperior.insets = new Insets(10, 25, 10, 25);
+        gbcSuperior.weightx = 1.0;
+        gbcSuperior.gridy = 0;
 
-        boton_nuevo_material.setText("Ingresar");
+        lblTitulo.setText("Mediateca Don Bosco");
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 24));
+        lblTitulo.setForeground(new Color(0, 120, 255));
+        panelSuperior.add(lblTitulo, gbcSuperior);
 
-        boton_buscar_material.setText("Consultar");
+        gbcSuperior.gridy = 1;
+        gbcSuperior.insets = new Insets(0, 25, 35, 25);
+        lblSubtitulo.setText("Administrador");
+        lblSubtitulo.setFont(new Font("Arial", Font.PLAIN, 15));
+        lblSubtitulo.setForeground(Color.WHITE);
+        panelSuperior.add(lblSubtitulo, gbcSuperior);
 
-        boton_restablecer_contra.setText("Restablecer");
+        gbcSuperior.insets = new Insets(10, 25, 10, 25);
 
-        boton_busca_prestam.setText("Prestamos");
+        configurarBoton(btnGestionUsuarios, "Gestión de Usuarios");
+        gbcSuperior.gridy = 2;
+        panelSuperior.add(btnGestionUsuarios, gbcSuperior);
 
-        boton_calcularmora.setText("Calcular Mora");
+        configurarBoton(btnGestionMateriales, "Gestión de Materiales");
+        gbcSuperior.gridy = 3;
+        panelSuperior.add(btnGestionMateriales, gbcSuperior);
 
-        boton_configadmin.setText("Configuracion");
+        configurarBoton(boton_busca_prestam, "Préstamos");
+        gbcSuperior.gridy = 4;
+        panelSuperior.add(boton_busca_prestam, gbcSuperior);
 
-        jLabel1.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel1.setText("Biblioteca Virtual");
+        configurarBoton(boton_configadmin, "Configuración");
+        gbcSuperior.gridy = 5;
+        panelSuperior.add(boton_configadmin, gbcSuperior);
 
-        jLabel3.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel3.setText("Más");
+        configurarBoton(btnReporteDisponibilidad, "📊 Ver Disponibilidad");
+        gbcSuperior.gridy = 6;
+        panelSuperior.add(btnReporteDisponibilidad, gbcSuperior);
 
-        jLabel4.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel4.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel4.setText("Usuarios");
+        GridBagConstraints gbcGlue = new GridBagConstraints();
+        gbcGlue.gridx = 0;
+        gbcGlue.gridy = 7;
+        gbcGlue.weighty = 1.0;
+        gbcGlue.fill = GridBagConstraints.VERTICAL;
+        panelSuperior.add(new javax.swing.JPanel(), gbcGlue);
 
-        jLabel2.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel2.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("Material");
+        gbc.gridy = 0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        pnlMenu.add(panelSuperior, gbc);
 
-        jLabel5.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel5.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel5.setText("Administrador");
+        configurarBoton(btnCerrarSesion, "Cerrar Sesión");
+        btnCerrarSesion.setBackground(new Color(204, 0, 0));
+        gbc.gridy = 1;
+        gbc.weighty = 0;
+        gbc.insets = new Insets(0, 25, 25, 25);
+        pnlMenu.add(btnCerrarSesion, gbc);
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGap(0, 19, Short.MAX_VALUE)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel5)
-                    .addComponent(jLabel1)
-                    .addComponent(jLabel4)
-                    .addComponent(boton_nuevo_user, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(boton_restablecer_contra, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(boton_nuevo_material, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(boton_buscar_material, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3)
-                    .addComponent(boton_busca_prestam, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(boton_configadmin, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(boton_calcularmora, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(17, 17, 17))
+        add(pnlMenu, BorderLayout.WEST);
+
+        pnlContenido.setBackground(new Color(5, 15, 45));
+        pnlContenido.setLayout(new GridBagLayout());
+        GridBagConstraints center = new GridBagConstraints();
+        center.gridx = 0;
+        center.insets = new Insets(15, 15, 15, 15);
+
+        lblBienvenida.setText("Panel Administrativo");
+        lblBienvenida.setFont(new Font("Arial", Font.BOLD, 42));
+        lblBienvenida.setForeground(Color.WHITE);
+        center.gridy = 0;
+        pnlContenido.add(lblBienvenida, center);
+
+        lblDescripcion.setText(
+                "<html><div style='text-align:center;'>"
+                + "Bienvenido al sistema de gesti\u00f3n de la Mediateca Don Bosco.<br><br>"
+                + "Desde este panel puede administrar usuarios, materiales,<br>"
+                + "pr\u00e9stamos y configuraciones del sistema."
+                + "</div></html>"
         );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(27, 27, 27)
-                .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel5)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel4)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(boton_nuevo_user, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(boton_restablecer_contra, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(24, 24, 24)
-                .addComponent(jLabel2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(boton_nuevo_material, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(boton_buscar_material, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(30, 30, 30)
-                .addComponent(jLabel3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(boton_busca_prestam, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(boton_configadmin, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(boton_calcularmora, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(19, 19, 19))
-        );
+        lblDescripcion.setFont(new Font("Arial", Font.PLAIN, 22));
+        lblDescripcion.setForeground(new Color(220, 220, 220));
+        center.gridy = 1;
+        pnlContenido.add(lblDescripcion, center);
 
-        boton_nuevo_user.getAccessibleContext().setAccessibleName("boton_ingresar_user");
+        add(pnlContenido, BorderLayout.CENTER);
+    }
 
-        jPanel2.setBackground(new java.awt.Color(11, 30, 78));
+    private void configurarBoton(javax.swing.JButton boton, String texto) {
+        boton.setText(texto);
+        boton.setFont(new Font("Arial", Font.BOLD, 14));
+        boton.setBackground(new Color(0, 102, 255));
+        boton.setForeground(Color.WHITE);
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setPreferredSize(new Dimension(220, 42));
+    }
 
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 1074, Short.MAX_VALUE)
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 653, Short.MAX_VALUE)
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
-        this.setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-
-        getAccessibleContext().setAccessibleName("PanelAdmin");
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void boton_nuevo_userActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_boton_nuevo_userActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_boton_nuevo_userActionPerformed
-
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
+    // Variables declaration
+    private javax.swing.JButton btnCerrarSesion;
+    private javax.swing.JButton btnGestionMateriales;
+    private javax.swing.JButton btnGestionUsuarios;
+    private javax.swing.JButton btnReporteDisponibilidad;
     private javax.swing.JButton boton_busca_prestam;
-    private javax.swing.JButton boton_buscar_material;
-    private javax.swing.JButton boton_calcularmora;
     private javax.swing.JButton boton_configadmin;
-    private javax.swing.JButton boton_nuevo_material;
-    private javax.swing.JButton boton_nuevo_user;
-    private javax.swing.JButton boton_restablecer_contra;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
-    // End of variables declaration//GEN-END:variables
+    private javax.swing.JLabel lblBienvenida;
+    private javax.swing.JLabel lblDescripcion;
+    private javax.swing.JLabel lblSubtitulo;
+    private javax.swing.JLabel lblTitulo;
+    private javax.swing.JPanel pnlContenido;
+    private javax.swing.JPanel pnlMenu;
+    // End of variables declaration
 }

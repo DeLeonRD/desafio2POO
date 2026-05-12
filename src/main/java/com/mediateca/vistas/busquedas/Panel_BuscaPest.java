@@ -3,105 +3,134 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas.busquedas;
- 
+
 import com.mediateca.dao.PrestamoDAO;
+import com.mediateca.dao.TipoMaterialDAO;
+import com.mediateca.model.Usuario;
+import com.mediateca.util.SessionManager;
 import com.mediateca.vistas.Panel_administrador;
+import com.mediateca.vistas.Panel_Alumno;
+import com.mediateca.vistas.Panel_Bienvenida;
+import com.mediateca.vistas.Panel_Docente;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
- 
-/**
- *
- * @author Francisco De la O Gonzalez - DG200722
- *
- * Panel de búsqueda de préstamos. Filtros:
- *   jTextField1 -> CARNET (se interpreta como id_usuario numérico)
- *   jTextField2 -> NOMBRE (LIKE sobre nombre del usuario)
- *   jComboBox1  -> Tipo de material
- *
- * Nota: el form tiene 5 botones "Modificar" sin funcionalidad de backend.
- * Los conecto a un aviso "Pendiente" para no dejarlos muertos.
- */
+
 public class Panel_BuscaPest extends javax.swing.JPanel {
- 
+
     private static final Logger logger = Logger.getLogger(Panel_BuscaPest.class.getName());
- 
-    private static final String[] COLUMNAS = {
-        "ID Préstamo", "ID Usuario", "Nombre", "Tipo", "Título",
-        "Fecha Préstamo", "Fecha Devolución", "Estado", "Mora"
-    };
- 
     private final PrestamoDAO prestamoDAO = new PrestamoDAO();
- 
-    /**
-     * Creates new form Panel_BuscaMat
-     */
+    private final TipoMaterialDAO tipoMaterialDAO = new TipoMaterialDAO();
+
     public Panel_BuscaPest() {
         initComponents();
         configurarTabla();
+        cargarTiposMateriales();
         cablearEventos();
+        limpiar();
     }
- 
+
     private void configurarTabla() {
-        DefaultTableModel modelo = new DefaultTableModel(COLUMNAS, 0) {
+        DefaultTableModel modelo = new DefaultTableModel(
+            new String[]{"ID", "ID Usuario", "Usuario", "Tipo", "Material", "Fecha Préstamo", "Fecha Esperada", "Estado", "Mora USD"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        jTable1.setModel(modelo);
+        tblPrestamos.setModel(modelo);
+        
+        // Ajustar anchos de columna
+        tblPrestamos.getColumnModel().getColumn(0).setPreferredWidth(50);
+        tblPrestamos.getColumnModel().getColumn(1).setPreferredWidth(70);
+        tblPrestamos.getColumnModel().getColumn(2).setPreferredWidth(120);
+        tblPrestamos.getColumnModel().getColumn(3).setPreferredWidth(80);
+        tblPrestamos.getColumnModel().getColumn(4).setPreferredWidth(180);
+        tblPrestamos.getColumnModel().getColumn(5).setPreferredWidth(100);
+        tblPrestamos.getColumnModel().getColumn(6).setPreferredWidth(100);
+        tblPrestamos.getColumnModel().getColumn(7).setPreferredWidth(100);
+        tblPrestamos.getColumnModel().getColumn(8).setPreferredWidth(80);
     }
- 
+
+    private void cargarTiposMateriales() {
+        cmbTipo.removeAllItems();
+        cmbTipo.addItem("-- Todos --");
+        List<String> tipos = tipoMaterialDAO.listarTipos();
+        for (String tipo : tipos) {
+            cmbTipo.addItem(tipo);
+        }
+    }
+
     private void cablearEventos() {
-        boton_buscar_prestamo_tabla.addActionListener(e -> buscar());
-        boton_limpiarcampos.addActionListener(e -> limpiar());
-        boton_regresar_menu.addActionListener(e -> volverAlMenu());
- 
-        java.awt.event.ActionListener pendiente = e -> JOptionPane.showMessageDialog(
-            this,
-            "Funcionalidad de modificar préstamo aún no implementada.",
-            "Pendiente", JOptionPane.INFORMATION_MESSAGE);
-        jButton4.addActionListener(pendiente);
-        jButton5.addActionListener(pendiente);
-        jButton6.addActionListener(pendiente);
-        jButton7.addActionListener(pendiente);
-        jButton8.addActionListener(pendiente);
+        btnBuscar.addActionListener(e -> buscar());
+        btnLimpiar.addActionListener(e -> limpiar());
+        btnVolver.addActionListener(e -> volverAlMenu());
     }
- 
+
     private void buscar() {
-        String carnetTxt = jTextField1.getText().trim();
-        String nombre    = jTextField2.getText().trim();
-        String tipo      = (String) jComboBox1.getSelectedItem();
- 
+        String carnetTxt = txtCarnet.getText().trim();
+        String nombre = txtNombre.getText().trim();
+        String tipo = (String) cmbTipo.getSelectedItem();
+        
+        if ("-- Todos --".equals(tipo)) {
+            tipo = null;
+        }
+
         int idUsuario = -1;
         if (!carnetTxt.isEmpty()) {
             try {
                 idUsuario = Integer.parseInt(carnetTxt);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this,
-                    "El carnet debe ser un número (id de usuario).",
+                    "El carnet debe ser un número (ID de usuario).",
                     "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
- 
+
         try {
-            List<Object[]> filas = prestamoDAO.buscarPrestamos(idUsuario, nombre, tipo);
- 
-            DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+            List<Object[]> filas = prestamoDAO.buscarPrestamos(idUsuario, nombre.isEmpty() ? null : nombre, tipo);
+            
+            DefaultTableModel modelo = (DefaultTableModel) tblPrestamos.getModel();
             modelo.setRowCount(0);
+            
             for (Object[] fila : filas) {
-                modelo.addRow(fila);
+                String estado = (String) fila[7];
+                String estadoMostrar;
+                switch (estado) {
+                    case "ACTIVO":
+                        estadoMostrar = "EN CIRCULACION";
+                        break;
+                    case "DEVUELTO":
+                        estadoMostrar = "DEVUELTO";
+                        break;
+                    case "VENCIDO":
+                        estadoMostrar = "VENCIDO";
+                        break;
+                    default:
+                        estadoMostrar = estado;
+                }
+                
+                double mora = (double) fila[8];
+                String moraStr = String.format("$%.2f", mora);
+                
+                modelo.addRow(new Object[]{
+                    fila[0], fila[1], fila[2], fila[3], fila[4],
+                    fila[5], fila[6], estadoMostrar, moraStr
+                });
             }
- 
+            
             if (filas.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                     "No se encontraron préstamos con esos filtros.",
                     "Sin resultados", JOptionPane.INFORMATION_MESSAGE);
             }
+            
+            lblResultados.setText("Resultados: " + modelo.getRowCount() + " préstamos encontrados");
+            
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al buscar préstamos", ex);
             JOptionPane.showMessageDialog(this,
@@ -109,221 +138,191 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
- 
+
     private void limpiar() {
-        jTextField1.setText("");
-        jTextField2.setText("");
-        jComboBox1.setSelectedIndex(0);
-        ((DefaultTableModel) jTable1.getModel()).setRowCount(0);
-        jTextField1.requestFocus();
+        txtCarnet.setText("");
+        txtNombre.setText("");
+        cmbTipo.setSelectedIndex(0);
+        ((DefaultTableModel) tblPrestamos.getModel()).setRowCount(0);
+        lblResultados.setText("Resultados: 0 préstamos encontrados");
+        txtCarnet.requestFocus();
     }
- 
+
     private void volverAlMenu() {
-        Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
+        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
+        if (ventana == null) return;
+        
+        Usuario usuarioActual = SessionManager.getUsuarioActual();
+        
+        if (usuarioActual == null) {
+            ventana.mostrar(new Panel_Bienvenida());
+            return;
+        }
+        
+        String tipo = usuarioActual.getTipo();
+        
+        switch (tipo) {
+            case "ADMIN":
+                ventana.mostrar(new Panel_administrador());
+                break;
+            case "EMPLEADO":
+            case "PROFESOR":
+                ventana.mostrar(new Panel_Docente());
+                break;
+            case "ALUMNO":
+                ventana.mostrar(new Panel_Alumno());
+                break;
+            default:
+                ventana.mostrar(new Panel_Bienvenida());
+        }
     }
- 
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
-        boton_buscar_prestamo_tabla = new javax.swing.JButton();
-        boton_limpiarcampos = new javax.swing.JButton();
-        boton_regresar_menu = new javax.swing.JButton();
-        jComboBox1 = new javax.swing.JComboBox<>();
         jLabel1 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
-        jTextField2 = new javax.swing.JTextField();
         jLabel3 = new javax.swing.JLabel();
+        txtCarnet = new javax.swing.JTextField();
+        txtNombre = new javax.swing.JTextField();
+        cmbTipo = new javax.swing.JComboBox<>();
+        btnBuscar = new javax.swing.JButton();
+        btnLimpiar = new javax.swing.JButton();
+        btnVolver = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tblPrestamos = new javax.swing.JTable();
         jLabel4 = new javax.swing.JLabel();
-        jButton7 = new javax.swing.JButton();
-        jButton8 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
-        jButton6 = new javax.swing.JButton();
+        lblResultados = new javax.swing.JLabel();
 
-        setMaximumSize(new java.awt.Dimension(1075, 655));
-        setMinimumSize(new java.awt.Dimension(1075, 655));
+        setPreferredSize(new java.awt.Dimension(1280, 720));
+        setBackground(new java.awt.Color(8, 20, 55));
 
-        jTable1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4", "Title 5", "Title 6", "Title 7", "Title 8"
-            }
-        ));
-        jScrollPane1.setViewportView(jTable1);
-
-        boton_buscar_prestamo_tabla.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        boton_buscar_prestamo_tabla.setText("BUSCAR");
-
-        boton_limpiarcampos.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        boton_limpiarcampos.setText("LIMPIAR");
-        boton_limpiarcampos.addActionListener(this::boton_limpiarcamposActionPerformed);
-
-        boton_regresar_menu.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        boton_regresar_menu.setText("CANCELAR");
-
-        jComboBox1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "LIBRO", "REVISTA", "TESIS", "CD", "DVD" }));
-
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel1.setText("CARNET");
-
-        jLabel2.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel2.setText("NOMBRE");
-
-        jTextField2.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel3.setText("Tipo");
-
-        jLabel4.setFont(new java.awt.Font("Arial Black", 0, 36)); // NOI18N
+        jLabel4.setFont(new java.awt.Font("Arial", 1, 28));
+        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel4.setText("BUSQUEDA DE PRESTAMOS");
+        jLabel4.setText("BÚSQUEDA DE PRÉSTAMOS");
 
-        jButton7.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jButton7.setText("Modificar");
+        jLabel1.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel1.setText("ID Usuario (Carnet):");
 
-        jButton8.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jButton8.setText("Modificar");
+        jLabel2.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel2.setText("Nombre del Usuario:");
 
-        jButton4.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jButton4.setText("Modificar");
-        jButton4.addActionListener(this::jButton4ActionPerformed);
+        jLabel3.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel3.setText("Tipo de Material:");
 
-        jButton5.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jButton5.setText("Modificar");
+        txtCarnet.setFont(new java.awt.Font("Arial", 0, 14));
+        txtCarnet.setPreferredSize(new java.awt.Dimension(200, 30));
 
-        jButton6.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jButton6.setText("Modificar");
+        txtNombre.setFont(new java.awt.Font("Arial", 0, 14));
+        txtNombre.setPreferredSize(new java.awt.Dimension(250, 30));
+
+        cmbTipo.setFont(new java.awt.Font("Arial", 0, 14));
+        cmbTipo.setPreferredSize(new java.awt.Dimension(150, 30));
+
+        btnBuscar.setBackground(new java.awt.Color(0, 102, 204));
+        btnBuscar.setFont(new java.awt.Font("Arial", 1, 14));
+        btnBuscar.setForeground(new java.awt.Color(255, 255, 255));
+        btnBuscar.setText("BUSCAR");
+        btnBuscar.setBorderPainted(false);
+        btnBuscar.setPreferredSize(new java.awt.Dimension(120, 35));
+
+        btnLimpiar.setBackground(new java.awt.Color(102, 102, 102));
+        btnLimpiar.setFont(new java.awt.Font("Arial", 1, 14));
+        btnLimpiar.setForeground(new java.awt.Color(255, 255, 255));
+        btnLimpiar.setText("LIMPIAR");
+        btnLimpiar.setBorderPainted(false);
+        btnLimpiar.setPreferredSize(new java.awt.Dimension(120, 35));
+
+        btnVolver.setBackground(new java.awt.Color(204, 0, 0));
+        btnVolver.setFont(new java.awt.Font("Arial", 1, 14));
+        btnVolver.setForeground(new java.awt.Color(255, 255, 255));
+        btnVolver.setText("VOLVER");
+        btnVolver.setBorderPainted(false);
+        btnVolver.setPreferredSize(new java.awt.Dimension(120, 35));
+
+        tblPrestamos.setFont(new java.awt.Font("Arial", 0, 12));
+        jScrollPane1.setViewportView(tblPrestamos);
+
+        lblResultados.setFont(new java.awt.Font("Arial", 0, 12));
+        lblResultados.setForeground(new java.awt.Color(200, 200, 200));
+        lblResultados.setText("Resultados: 0 préstamos encontrados");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addGap(30, 30, 30)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(60, 60, 60)
+                        .addGap(50, 50, 50)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel1)
-                            .addComponent(jLabel3))
-                        .addGap(18, 18, 18)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(layout.createSequentialGroup()
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(218, 218, 218)
-                                        .addComponent(boton_buscar_prestamo_tabla))
-                                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(55, 55, 55)
-                                        .addComponent(boton_limpiarcampos))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                        .addGap(125, 125, 125)
-                                        .addComponent(jLabel2)))
-                                .addGap(18, 18, 18)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(boton_regresar_menu)
-                                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 338, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 97, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 930, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jButton5)
-                            .addComponent(jButton6)
-                            .addComponent(jButton7)
-                            .addComponent(jButton8)
-                            .addComponent(jButton4))
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addComponent(jLabel1)
+                                .addGap(10, 10, 10)
+                                .addComponent(txtCarnet, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(40, 40, 40)
+                                .addComponent(jLabel2)
+                                .addGap(10, 10, 10)
+                                .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(40, 40, 40)
+                                .addComponent(jLabel3)
+                                .addGap(10, 10, 10)
+                                .addComponent(cmbTipo, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(200, 200, 200)
+                                .addComponent(btnBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(30, 30, 30)
+                                .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(30, 30, 30)
+                                .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1200, Short.MAX_VALUE)
+                    .addComponent(lblResultados))
+                .addGap(30, 30, 30))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
+                .addGap(20, 20, 20)
                 .addComponent(jLabel4)
-                .addGap(61, 61, 61)
+                .addGap(40, 40, 40)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtCarnet, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(26, 26, 26)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel3)
-                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
+                    .addComponent(cmbTipo, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(30, 30, 30)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(boton_limpiarcampos)
-                    .addComponent(boton_buscar_prestamo_tabla)
-                    .addComponent(boton_regresar_menu))
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(40, 40, 40)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 307, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(76, 76, 76))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(jButton5)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton6)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton7)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton8)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton4)
-                        .addGap(140, 140, 140))))
+                    .addComponent(btnBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(10, 10, 10)
+                .addComponent(lblResultados)
+                .addContainerGap(20, Short.MAX_VALUE))
         );
-    }// </editor-fold>//GEN-END:initComponents
+    }
 
-    private void boton_limpiarcamposActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_boton_limpiarcamposActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_boton_limpiarcamposActionPerformed
-
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton4ActionPerformed
-
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton boton_buscar_prestamo_tabla;
-    private javax.swing.JButton boton_limpiarcampos;
-    private javax.swing.JButton boton_regresar_menu;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton6;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
-    private javax.swing.JComboBox<String> jComboBox1;
+    // Variables declaration
+    private javax.swing.JButton btnBuscar;
+    private javax.swing.JButton btnLimpiar;
+    private javax.swing.JButton btnVolver;
+    private javax.swing.JComboBox<String> cmbTipo;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    // End of variables declaration//GEN-END:variables
+    private javax.swing.JLabel lblResultados;
+    private javax.swing.JTable tblPrestamos;
+    private javax.swing.JTextField txtCarnet;
+    private javax.swing.JTextField txtNombre;
+    // End of variables declaration
 }

@@ -3,298 +3,560 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
  */
 package com.mediateca.vistas;
- 
+
 import com.mediateca.dao.UsuarioDAO;
 import com.mediateca.model.Usuario;
 import com.mediateca.util.SessionManager;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Insets;
+import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
- 
-/**
- *
- * @author Francisco De la O Gonzalez - DG200722
- */
+
 public class Panel_Bienvenida extends javax.swing.JPanel {
- 
+
     private static final Logger logger = Logger.getLogger(Panel_Bienvenida.class.getName());
- 
+
     private final UsuarioDAO usuarioDAO = new UsuarioDAO();
- 
-    /**
-     * Creates new form Panel_Bienvenida
-     */
+
     public Panel_Bienvenida() {
+
         initComponents();
+
         cablearEventos();
-        label_ayuda.setText(" "); // limpiar el texto "Ayuda" por defecto
+
+        lblMensajeError.setText(" ");
+
+        cargarLogo();
     }
- 
-    private void cablearEventos() {
-        boton_login_acceder.addActionListener(e -> hacerLogin());
-        // Permitir login con ENTER en el campo de contraseña
-        campo_login_password.addActionListener(e -> hacerLogin());
-    }
- 
-    /**
-     * Valida las credenciales contra la BD y navega al panel correspondiente
-     * segun el tipo de usuario.
-     */
-    private void hacerLogin() {
-        String email = campo_login_carnet.getText().trim();
-        String password = new String(campo_login_password.getPassword());
- 
-        // Validaciones basicas de entrada
-        if (email.isEmpty() || password.isEmpty()) {
-            mostrarError("Ingrese usuario y contraseña.");
-            return;
-        }
- 
+
+    // =====================================================
+    // CARGAR LOGO
+    // =====================================================
+
+    private void cargarLogo() {
+
         try {
-            if (!usuarioDAO.validarCredenciales(email, password)) {
-                mostrarError("Credenciales incorrectas.");
-                campo_login_password.setText("");
-                return;
+
+            URL logoUrl = getClass().getResource("/imagenes/Logo UDB.png");
+
+            if (logoUrl != null) {
+
+                ImageIcon logoIcon = new ImageIcon(logoUrl);
+
+                Image logo = logoIcon.getImage().getScaledInstance(
+                        220,
+                        220,
+                        Image.SCALE_SMOOTH
+                );
+
+                lblLogo.setIcon(new ImageIcon(logo));
+
+                lblLogo.setText("");
+
+            } else {
+
+                lblLogo.setText("📚");
+
+                lblLogo.setFont(new java.awt.Font("Segoe UI Emoji", 1, 80));
             }
- 
-            Usuario u = usuarioDAO.obtenerPorEmail(email);
-            if (u == null) {
-                mostrarError("No se pudo cargar el usuario.");
-                return;
-            }
- 
-            // Login exitoso: guardar en sesion y navegar
-            SessionManager.iniciarSesion(u);
-            label_ayuda.setText(" ");
-            campo_login_password.setText("");
- 
-            navegarSegunTipo(u);
- 
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Error inesperado al hacer login", ex);
-            JOptionPane.showMessageDialog(this,
-                "Error de conexión: " + ex.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+
+        } catch (Exception e) {
+
+            lblLogo.setText("📚");
+
+            lblLogo.setFont(new java.awt.Font("Segoe UI Emoji", 1, 80));
         }
     }
- 
-    /**
-     * Carga el panel correspondiente al tipo del usuario logueado.
-     * Tipos soportados en BD: ADMIN, EMPLEADO, PROFESOR, ALUMNO.
-     */
-    private void navegarSegunTipo(Usuario u) {
-        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
-        if (ventana == null) {
-            mostrarError("Error interno: ventana principal no disponible.");
+
+    // =====================================================
+    // EVENTOS
+    // =====================================================
+
+    private void cablearEventos() {
+
+        btnAcceder.addActionListener(e -> hacerLogin());
+
+        txtPassword.addActionListener(e -> hacerLogin());
+    }
+
+    // =====================================================
+    // LOGIN
+    // =====================================================
+
+    private void hacerLogin() {
+
+        String email = txtUsuario.getText().trim();
+
+        String password = new String(txtPassword.getPassword());
+
+        if (email.isEmpty() || password.isEmpty()) {
+
+            lblMensajeError.setText("Ingrese correo y contraseña.");
+
             return;
         }
- 
-        String tipo = u.getTipo() == null ? "" : u.getTipo().toUpperCase();
+
+        try {
+
+            if (!usuarioDAO.validarCredenciales(email, password)) {
+
+                lblMensajeError.setText("Credenciales incorrectas.");
+
+                txtPassword.setText("");
+
+                return;
+            }
+
+            Usuario u = usuarioDAO.obtenerPorEmail(email);
+
+            if (u == null) {
+
+                lblMensajeError.setText("No se pudo cargar el usuario.");
+
+                return;
+            }
+
+            SessionManager.iniciarSesion(u);
+
+            lblMensajeError.setText(" ");
+
+            txtPassword.setText("");
+
+            navegarSegunTipo(u);
+
+        } catch (Exception ex) {
+
+            logger.log(Level.SEVERE, "Error al hacer login", ex);
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error de conexión: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // =====================================================
+    // NAVEGACION
+    // =====================================================
+
+    private void navegarSegunTipo(Usuario u) {
+
+        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
+
+        if (ventana == null) {
+            return;
+        }
+
+        String tipo = u.getTipo() == null
+                ? ""
+                : u.getTipo().toUpperCase();
+
         switch (tipo) {
+
             case "ADMIN":
+
                 ventana.mostrar(new Panel_administrador());
+
                 break;
+
             case "EMPLEADO":
+
             case "PROFESOR":
-                // No existe Panel_Empleado por ahora; un empleado opera con
-                // las mismas herramientas que un docente.
-                // Si despues crean un Panel_Empleado, mover el case EMPLEADO arriba.
+
                 ventana.mostrar(new Panel_Docente());
+
                 break;
+
             case "ALUMNO":
+
                 ventana.mostrar(new Panel_Alumno());
+
                 break;
+
             default:
-                logger.warning("Tipo de usuario no reconocido: " + tipo);
-                mostrarError("Rol no reconocido: " + tipo);
+
+                lblMensajeError.setText("Rol no reconocido: " + tipo);
+
                 SessionManager.cerrarSesion();
         }
     }
- 
-    private void mostrarError(String mensaje) {
-        label_ayuda.setText(mensaje);
-    }
- 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+
+    // =====================================================
+    // COMPONENTES
+    // =====================================================
+
+    @SuppressWarnings("unchecked")
     private void initComponents() {
 
-        jLabel1 = new javax.swing.JLabel();
-        label_ayuda = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jScrollPane4 = new javax.swing.JScrollPane();
-        jTextArea4 = new javax.swing.JTextArea();
-        jPanel1 = new javax.swing.JPanel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
-        campo_login_carnet = new javax.swing.JTextField();
-        campo_login_password = new javax.swing.JPasswordField();
-        boton_login_acceder = new javax.swing.JButton();
+        // =====================================================
+        // COMPONENTES
+        // =====================================================
 
-        setBackground(new java.awt.Color(11, 19, 43));
-        setForeground(new java.awt.Color(255, 255, 255));
-        setMaximumSize(new java.awt.Dimension(1280, 665));
-        setMinimumSize(new java.awt.Dimension(1280, 665));
-        setName(""); // NOI18N
-        setPreferredSize(new java.awt.Dimension(1280, 665));
+        pnlPrincipal = new javax.swing.JPanel();
 
-        jLabel1.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel1.setText("Biblioteca Virtual");
+        pnlFormulario = new javax.swing.JPanel();
 
-        label_ayuda.setBackground(new java.awt.Color(11, 19, 43));
-        label_ayuda.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        label_ayuda.setForeground(new java.awt.Color(255, 255, 255));
-        label_ayuda.setText("Ayuda");
+        lblLogo = new javax.swing.JLabel();
 
-        jLabel2.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel2.setFont(new java.awt.Font("Arial", 1, 36)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("¡Bienvenido a tu");
+        lblTituloSistema = new javax.swing.JLabel();
 
-        jLabel3.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel3.setFont(new java.awt.Font("Arial", 1, 36)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(0, 102, 204));
-        jLabel3.setText("Biblioteca Virtual!");
+        lblTituloBienvenida = new javax.swing.JLabel();
 
-        jTextArea4.setBackground(new java.awt.Color(11, 19, 43));
-        jTextArea4.setColumns(20);
-        jTextArea4.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jTextArea4.setForeground(new java.awt.Color(204, 204, 204));
-        jTextArea4.setRows(3);
-        jTextArea4.setText("Explora, descubre y accede a miles de libros,\n revistas y recursos académicos desde \ncualquier lugar y en cualquier momento.");
-        jTextArea4.setAutoscrolls(false);
-        jTextArea4.setBorder(null);
-        jTextArea4.setCaretColor(new java.awt.Color(11, 19, 43));
-        jTextArea4.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
-        jScrollPane4.setViewportView(jTextArea4);
+        lblSubtitulo = new javax.swing.JLabel();
 
-        jPanel1.setBackground(new java.awt.Color(11, 19, 43));
-        jPanel1.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 3, true));
+        txtDescripcion = new javax.swing.JTextArea();
 
-        jLabel4.setBackground(new java.awt.Color(11, 19, 43));
-        jLabel4.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel4.setText("Iniciar Sesión");
+        lblIniciarSesion = new javax.swing.JLabel();
 
-        jLabel6.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel6.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel6.setText("Usuario/Carnet");
+        lblUsuario = new javax.swing.JLabel();
 
-        jLabel7.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel7.setText("Contraseña");
+        txtUsuario = new javax.swing.JTextField();
 
-        campo_login_carnet.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
+        lblPassword = new javax.swing.JLabel();
 
-        campo_login_password.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
+        txtPassword = new javax.swing.JPasswordField();
 
-        boton_login_acceder.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        boton_login_acceder.setText("ACCEDER");
+        btnAcceder = new javax.swing.JButton();
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(34, 34, 34)
-                        .addComponent(jLabel7)
-                        .addGap(18, 32, Short.MAX_VALUE)
-                        .addComponent(campo_login_password, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel4)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel6)
-                                .addGap(18, 18, 18)
-                                .addComponent(campo_login_carnet, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                .addGap(29, 29, 29))
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(139, 139, 139)
-                .addComponent(boton_login_acceder)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel4)
-                .addGap(72, 72, 72)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel6)
-                    .addComponent(campo_login_carnet, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(43, 43, 43)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel7)
-                    .addComponent(campo_login_password, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 80, Short.MAX_VALUE)
-                .addComponent(boton_login_acceder, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(56, 56, 56))
-        );
+        lblMensajeError = new javax.swing.JLabel();
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
-        this.setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(77, 77, 77)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel3)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel1)
-                    .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 377, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 328, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(label_ayuda, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(95, 95, 95))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGap(34, 34, 34)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(label_ayuda))
-                .addGap(68, 68, 68)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel3)
-                        .addGap(79, 79, 79)
-                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(159, Short.MAX_VALUE))
+        // =====================================================
+        // PANEL PRINCIPAL
+        // =====================================================
+
+        setBackground(new java.awt.Color(5, 15, 45));
+
+        setLayout(new BorderLayout());
+
+        pnlPrincipal.setBackground(new java.awt.Color(5, 15, 45));
+
+        pnlPrincipal.setLayout(new GridLayout(1, 2));
+
+        // =====================================================
+        // PANEL IZQUIERDO
+        // =====================================================
+
+        javax.swing.JPanel pnlIzquierdo = new javax.swing.JPanel();
+
+        pnlIzquierdo.setBackground(new java.awt.Color(5, 15, 45));
+
+        pnlIzquierdo.setLayout(new GridBagLayout());
+
+        GridBagConstraints left = new GridBagConstraints();
+
+        left.gridx = 0;
+
+        left.fill = GridBagConstraints.HORIZONTAL;
+
+        left.anchor = GridBagConstraints.WEST;
+
+        left.insets = new Insets(10, 70, 10, 40);
+
+        // =====================================================
+        // LOGO
+        // =====================================================
+
+        lblLogo.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+
+        left.gridy = 0;
+
+        pnlIzquierdo.add(lblLogo, left);
+
+        // =====================================================
+        // TITULO SISTEMA
+        // =====================================================
+
+        lblTituloSistema.setFont(new java.awt.Font("Arial", 0, 26));
+
+        lblTituloSistema.setForeground(java.awt.Color.WHITE);
+
+        lblTituloSistema.setText("Mediateca Don Bosco");
+
+        left.gridy = 1;
+
+        left.insets = new Insets(0, 70, 30, 40);
+
+        pnlIzquierdo.add(lblTituloSistema, left);
+
+        // =====================================================
+        // BIENVENIDA
+        // =====================================================
+
+        lblTituloBienvenida.setFont(new java.awt.Font("Arial", 1, 50));
+
+        lblTituloBienvenida.setForeground(java.awt.Color.WHITE);
+
+        lblTituloBienvenida.setText("¡Bienvenido a tu");
+
+        left.gridy = 2;
+
+        left.insets = new Insets(25, 70, 5, 40);
+
+        pnlIzquierdo.add(lblTituloBienvenida, left);
+
+        // =====================================================
+        // SUBTITULO
+        // =====================================================
+
+        lblSubtitulo.setFont(new java.awt.Font("Arial", 1, 50));
+
+        lblSubtitulo.setForeground(new java.awt.Color(0, 102, 255));
+
+        lblSubtitulo.setText("Sistema de Préstamos!");
+
+        left.gridy = 3;
+
+        left.insets = new Insets(0, 70, 35, 40);
+
+        pnlIzquierdo.add(lblSubtitulo, left);
+
+        // =====================================================
+        // DESCRIPCION
+        // =====================================================
+
+        txtDescripcion.setBackground(new java.awt.Color(5, 15, 45));
+
+        txtDescripcion.setForeground(java.awt.Color.WHITE);
+
+        txtDescripcion.setFont(new java.awt.Font("Arial", 0, 20));
+
+        txtDescripcion.setEditable(false);
+
+        txtDescripcion.setBorder(
+                BorderFactory.createLineBorder(
+                        new java.awt.Color(70, 70, 70)
+                )
         );
 
-        getAccessibleContext().setAccessibleName("panel_bienvenida");
-    }// </editor-fold>//GEN-END:initComponents
+        txtDescripcion.setLineWrap(true);
 
+        txtDescripcion.setWrapStyleWord(true);
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton boton_login_acceder;
-    private javax.swing.JTextField campo_login_carnet;
-    private javax.swing.JPasswordField campo_login_password;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane4;
-    private javax.swing.JTextArea jTextArea4;
-    private javax.swing.JLabel label_ayuda;
-    // End of variables declaration//GEN-END:variables
+        txtDescripcion.setText(
+                "Gestione préstamos de libros, revistas,\n"
+                + "CDs, DVDs y más. Controle devoluciones,\n"
+                + "calcule moras y administre su mediateca\n"
+                + "de manera eficiente."
+        );
+
+        txtDescripcion.setPreferredSize(new Dimension(540, 180));
+
+        left.gridy = 4;
+
+        left.insets = new Insets(0, 70, 20, 40);
+
+        pnlIzquierdo.add(txtDescripcion, left);
+
+        // =====================================================
+        // PANEL DERECHO
+        // =====================================================
+
+        javax.swing.JPanel pnlDerecho = new javax.swing.JPanel();
+
+        pnlDerecho.setBackground(new java.awt.Color(5, 15, 45));
+
+        pnlDerecho.setLayout(new GridBagLayout());
+
+        GridBagConstraints right = new GridBagConstraints();
+
+        // =====================================================
+        // PANEL FORMULARIO LOGIN
+        // =====================================================
+
+        pnlFormulario.setBackground(new java.awt.Color(5, 15, 45));
+
+        pnlFormulario.setBorder(
+                BorderFactory.createLineBorder(
+                        new java.awt.Color(0, 102, 255),
+                        2
+                )
+        );
+
+        pnlFormulario.setPreferredSize(new Dimension(760, 450));
+
+        pnlFormulario.setLayout(new GridBagLayout());
+
+        GridBagConstraints form = new GridBagConstraints();
+
+        form.insets = new Insets(22, 30, 22, 30);
+
+        form.anchor = GridBagConstraints.WEST;
+
+        form.fill = GridBagConstraints.HORIZONTAL;
+
+        form.weightx = 1.0;
+
+        // =====================================================
+        // TITULO LOGIN
+        // =====================================================
+
+        lblIniciarSesion.setFont(new java.awt.Font("Arial", 1, 44));
+
+        lblIniciarSesion.setForeground(java.awt.Color.WHITE);
+
+        lblIniciarSesion.setText("Iniciar Sesión");
+
+        form.gridx = 0;
+
+        form.gridy = 0;
+
+        form.gridwidth = 2;
+
+        pnlFormulario.add(lblIniciarSesion, form);
+
+        // =====================================================
+        // LABEL USUARIO
+        // =====================================================
+
+        lblUsuario.setFont(new java.awt.Font("Arial", 0, 22));
+
+        lblUsuario.setForeground(java.awt.Color.WHITE);
+
+        lblUsuario.setText("Correo Institucional");
+
+        form.gridx = 0;
+
+        form.gridy = 1;
+
+        form.gridwidth = 1;
+
+        pnlFormulario.add(lblUsuario, form);
+
+        // =====================================================
+        // TEXTFIELD USUARIO
+        // =====================================================
+
+        txtUsuario.setFont(new java.awt.Font("Arial", 0, 18));
+
+        txtUsuario.setPreferredSize(new Dimension(420, 50));
+
+        form.gridx = 1;
+
+        pnlFormulario.add(txtUsuario, form);
+
+        // =====================================================
+        // LABEL PASSWORD
+        // =====================================================
+
+        lblPassword.setFont(new java.awt.Font("Arial", 0, 22));
+
+        lblPassword.setForeground(java.awt.Color.WHITE);
+
+        lblPassword.setText("Contraseña");
+
+        form.gridx = 0;
+
+        form.gridy = 2;
+
+        pnlFormulario.add(lblPassword, form);
+
+        // =====================================================
+        // PASSWORD FIELD
+        // =====================================================
+
+        txtPassword.setFont(new java.awt.Font("Arial", 0, 18));
+
+        txtPassword.setPreferredSize(new Dimension(420, 50));
+
+        form.gridx = 1;
+
+        pnlFormulario.add(txtPassword, form);
+
+        // =====================================================
+        // BOTON
+        // =====================================================
+
+        btnAcceder.setBackground(new java.awt.Color(0, 120, 255));
+
+        btnAcceder.setForeground(java.awt.Color.WHITE);
+
+        btnAcceder.setFont(new java.awt.Font("Arial", 1, 24));
+
+        btnAcceder.setText("ACCEDER");
+
+        btnAcceder.setFocusPainted(false);
+
+        btnAcceder.setBorderPainted(false);
+
+        btnAcceder.setPreferredSize(new Dimension(420, 55));
+
+        form.gridx = 1;
+
+        form.gridy = 3;
+
+        form.insets = new Insets(35, 30, 20, 30);
+
+        pnlFormulario.add(btnAcceder, form);
+
+        // =====================================================
+        // MENSAJE ERROR
+        // =====================================================
+
+        lblMensajeError.setForeground(new java.awt.Color(255, 120, 120));
+
+        lblMensajeError.setFont(new java.awt.Font("Arial", 0, 14));
+
+        form.gridy = 4;
+
+        pnlFormulario.add(lblMensajeError, form);
+
+        // =====================================================
+        // AGREGAR FORMULARIO
+        // =====================================================
+
+        pnlDerecho.add(pnlFormulario, right);
+
+        // =====================================================
+        // AGREGAR TODO
+        // =====================================================
+
+        pnlPrincipal.add(pnlIzquierdo);
+
+        pnlPrincipal.add(pnlDerecho);
+
+        add(pnlPrincipal, BorderLayout.CENTER);
+    }
+
+    // =====================================================
+    // VARIABLES
+    // =====================================================
+
+    private javax.swing.JButton btnAcceder;
+
+    private javax.swing.JLabel lblIniciarSesion;
+
+    private javax.swing.JLabel lblLogo;
+
+    private javax.swing.JLabel lblMensajeError;
+
+    private javax.swing.JLabel lblPassword;
+
+    private javax.swing.JLabel lblSubtitulo;
+
+    private javax.swing.JLabel lblTituloBienvenida;
+
+    private javax.swing.JLabel lblTituloSistema;
+
+    private javax.swing.JLabel lblUsuario;
+
+    private javax.swing.JPanel pnlFormulario;
+
+    private javax.swing.JPanel pnlPrincipal;
+
+    private javax.swing.JTextArea txtDescripcion;
+
+    private javax.swing.JPasswordField txtPassword;
+
+    private javax.swing.JTextField txtUsuario;
 }
