@@ -3,14 +3,14 @@ package com.mediateca.db;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.io.InputStream;
-import java.util.Properties;
 
 public class DatabaseConnection {
 
     private static DatabaseConnection instancia;
     private Connection conexion;
-    private String url, user, password;
+    private String url = "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    private String user = "root";
+    private String password = "323564.f";
 
     private DatabaseConnection() {
         conectar();
@@ -18,27 +18,10 @@ public class DatabaseConnection {
 
     private void conectar() {
         try {
-            cargarConfiguracion();
             conexion = DriverManager.getConnection(url, user, password);
             System.out.println("Conexión exitosa a la BD");
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("Error de conexión: " + e.getMessage());
-        }
-    }
-
-    private void cargarConfiguracion() throws Exception {
-        Properties props = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                url = "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-                user = "root";
-                password = "323564.f";
-                return;
-            }
-            props.load(input);
-            url = props.getProperty("db.url", "jdbc:mysql://localhost:3306/mediateca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
-            user = props.getProperty("db.user", "root");
-            password = props.getProperty("db.password", "root123");
         }
     }
 
