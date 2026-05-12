@@ -43,8 +43,8 @@ echo.
 echo Ejecutando el proyecto...
 echo.
 
-REM Ejecutar el JAR FAT con todas las dependencias
-java -jar target/ProyectoJava-1.0-SNAPSHOT-jar-with-dependencies.jar
+REM Ejecutar el JAR FAT con todas las dependencias (desde la raíz del proyecto)
+java -jar desafio2POO/target/ProyectoJava-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 echo.
 echo Programa finalizado.
