@@ -4,13 +4,16 @@
  */
 package com.mediateca.vistas;
 
+import com.mediateca.util.LoggerConfig;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.util.logging.Level;
 import javax.swing.JPanel;
 
 /**
- *
+ * Ventana principal de la aplicación Mediateca Don Bosco.
+ * Administra el cambio de paneles y mantiene la sesión global.
+ * 
  * @author Francisco De la O Gonzalez - DG200722
  */
 public class Ventana_PPAL extends javax.swing.JFrame {
@@ -85,7 +88,6 @@ public class Ventana_PPAL extends javax.swing.JFrame {
 
         setTitle("BIBLIOTECA VIRTUAL_UDB");
 
-        // CAMBIADO: de 11,19,43 a 5,15,45
         setBackground(new Color(5, 15, 45));
 
         setMinimumSize(new java.awt.Dimension(1280, 720));
@@ -98,7 +100,6 @@ public class Ventana_PPAL extends javax.swing.JFrame {
         // PANEL PRINCIPAL
         // =====================================================
 
-        // CAMBIADO: de 11,19,43 a 5,15,45
         jPanel1.setBackground(new Color(5, 15, 45));
 
         jPanel1.setPreferredSize(new java.awt.Dimension(1280, 720));
@@ -159,9 +160,16 @@ public class Ventana_PPAL extends javax.swing.JFrame {
     }// </editor-fold>
 
     /**
-     * @param args the command line arguments
+     * Punto de entrada principal de la aplicación.
+     * 
+     * @param args Argumentos de línea de comandos (no utilizados)
      */
     public static void main(String args[]) {
+
+        // =====================================================
+        // CONFIGURAR LOGGER (DEBE SER LO PRIMERO)
+        // =====================================================
+        LoggerConfig.configurarLogger();
 
         // =====================================================
         // LOOK AND FEEL

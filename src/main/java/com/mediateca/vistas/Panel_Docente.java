@@ -5,8 +5,7 @@
 package com.mediateca.vistas;
 
 import com.mediateca.db.DatabaseConnection;
-import com.mediateca.dao.ConfiguracionDAO;
-import com.mediateca.dao.MaterialDAO;
+import com.mediateca.service.ConfiguracionService;
 import com.mediateca.vistas.busquedas.Panel_BuscaPest;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -24,32 +23,38 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * Panel principal para usuarios con rol Docente o Empleado.
+ * Permite consultar préstamos, registrar devoluciones y ver disponibilidad de materiales.
+ */
 public class Panel_Docente extends javax.swing.JPanel {
-
-    private ConfiguracionDAO configDAO = new ConfiguracionDAO();
-    private MaterialDAO materialDAO = new MaterialDAO<com.mediateca.model.Material>() {
-        @Override public void insertar(com.mediateca.model.Material obj) {}
-        @Override public void listar() {}
-        @Override public void actualizar(int id, com.mediateca.model.Material obj) {}
-        @Override public void eliminar(int id) {}
-    };
 
     public Panel_Docente() {
         initComponents();
         cablearEventos();
     }
 
+    /**
+     * Conecta los botones del menú con sus respectivas acciones.
+     */
     private void cablearEventos() {
         boton_busca_prestam.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaPest()));
         btnRegistrarDevolucion.addActionListener(e -> mostrarPanelDevolucion());
         btnReporteDisponibilidad.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_ReporteDisponibilidad()));
+        btnRegistrarPrestamo.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new com.mediateca.vistas.formularios.Panel_RegistrarPrestamo()));
         btnCerrarSesion.addActionListener(e -> cerrarSesion());
     }
 
+    /**
+     * Muestra el panel de devolución de préstamos.
+     */
     private void mostrarPanelDevolucion() {
         Ventana_PPAL.getInstancia().mostrar(new Panel_Devolucion());
     }
 
+    /**
+     * Cierra la sesión actual y vuelve a la pantalla de bienvenida.
+     */
     private void cerrarSesion() {
         com.mediateca.util.SessionManager.cerrarSesion();
         Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
@@ -70,6 +75,7 @@ public class Panel_Docente extends javax.swing.JPanel {
         boton_busca_prestam = new javax.swing.JButton();
         btnRegistrarDevolucion = new javax.swing.JButton();
         btnReporteDisponibilidad = new javax.swing.JButton();
+        btnRegistrarPrestamo = new javax.swing.JButton();
         btnCerrarSesion = new javax.swing.JButton();
 
         setBackground(new Color(5, 15, 45));
@@ -114,6 +120,12 @@ public class Panel_Docente extends javax.swing.JPanel {
         configurarBoton(btnReporteDisponibilidad, "📊 Ver Disponibilidad");
         btnReporteDisponibilidad.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
         panelSuperior.add(btnReporteDisponibilidad);
+        panelSuperior.add(javax.swing.Box.createVerticalStrut(12));
+
+        configurarBoton(btnRegistrarPrestamo, "Registrar Préstamo");
+        btnRegistrarPrestamo.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
+        panelSuperior.add(btnRegistrarPrestamo);
+        panelSuperior.add(javax.swing.Box.createVerticalStrut(12));
 
         panelSuperior.add(javax.swing.Box.createVerticalGlue());
 
@@ -133,7 +145,7 @@ public class Panel_Docente extends javax.swing.JPanel {
         add(pnlMenu, BorderLayout.WEST);
 
         // =====================================================
-        // PANEL CONTENIDO
+        // PANEL DE CONTENIDO PRINCIPAL
         // =====================================================
         pnlContenido.setBackground(new Color(8, 20, 55));
         pnlContenido.setLayout(new GridBagLayout());
@@ -161,6 +173,12 @@ public class Panel_Docente extends javax.swing.JPanel {
         add(pnlContenido, BorderLayout.CENTER);
     }
 
+    /**
+     * Configura la apariencia de los botones del menú lateral.
+     * 
+     * @param boton  botón a configurar
+     * @param texto  texto que mostrará el botón
+     */
     private void configurarBoton(javax.swing.JButton boton, String texto) {
         boton.setText(texto);
         boton.setFont(new Font("Arial", Font.BOLD, 14));
@@ -191,6 +209,7 @@ public class Panel_Docente extends javax.swing.JPanel {
     private javax.swing.JButton btnCerrarSesion;
     private javax.swing.JButton btnRegistrarDevolucion;
     private javax.swing.JButton btnReporteDisponibilidad;
+    private javax.swing.JButton btnRegistrarPrestamo;
     private javax.swing.JButton boton_busca_prestam;
     private javax.swing.JLabel lblBienvenida;
     private javax.swing.JLabel lblDescripcion;
@@ -201,9 +220,10 @@ public class Panel_Docente extends javax.swing.JPanel {
     // End of variables declaration
 }
 
-// =====================================================
-// PANEL DE DEVOLUCION (clase interna - sin cambios)
-// =====================================================
+/**
+ * Panel interno para registrar la devolución de préstamos.
+ * Muestra los préstamos activos y permite seleccionar uno para registrar su devolución.
+ */
 class Panel_Devolucion extends javax.swing.JPanel {
 
     private DefaultTableModel model;
@@ -214,6 +234,9 @@ class Panel_Devolucion extends javax.swing.JPanel {
         cargarPrestamosActivos();
     }
 
+    /**
+     * Carga en la tabla los préstamos que están actualmente activos.
+     */
     private void cargarPrestamosActivos() {
         model = (DefaultTableModel) tblPrestamos.getModel();
         model.setRowCount(0);
@@ -240,6 +263,10 @@ class Panel_Devolucion extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Registra la devolución del préstamo seleccionado, calcula la mora si corresponde
+     * y actualiza la disponibilidad del material.
+     */
     private void registrarDevolucion() {
         if (prestamoSeleccionadoId == -1) {
             JOptionPane.showMessageDialog(this, "Seleccione un préstamo de la tabla.");
@@ -266,7 +293,7 @@ class Panel_Devolucion extends javax.swing.JPanel {
 
         long diasRetraso = ChronoUnit.DAYS.between(fechaEsperada.toLocalDate(), LocalDate.now());
         if (diasRetraso < 0) diasRetraso = 0;
-        double mora = diasRetraso * new ConfiguracionDAO().getMoraPorDia();
+        double mora = diasRetraso * ConfiguracionService.getMoraPorDia();
 
         int confirm = JOptionPane.showConfirmDialog(this,
             "Préstamo ID: " + prestamoSeleccionadoId + "\n" +
@@ -298,11 +325,17 @@ class Panel_Devolucion extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Limpia la selección actual y el área de detalle.
+     */
     private void limpiarSeleccion() {
         prestamoSeleccionadoId = -1;
         txtDetalle.setText("");
     }
 
+    /**
+     * Muestra los detalles del préstamo seleccionado en el área de texto.
+     */
     private void mostrarDetalle() {
         int row = tblPrestamos.getSelectedRow();
         if (row >= 0) {
@@ -314,7 +347,7 @@ class Panel_Devolucion extends javax.swing.JPanel {
 
             long diasRetraso = ChronoUnit.DAYS.between(fechaEsperada.toLocalDate(), LocalDate.now());
             if (diasRetraso < 0) diasRetraso = 0;
-            double mora = diasRetraso * new ConfiguracionDAO().getMoraPorDia();
+            double mora = diasRetraso * ConfiguracionService.getMoraPorDia();
 
             txtDetalle.setText("Usuario: " + usuario + "\n" +
                               "Material: " + material + "\n" +
@@ -325,6 +358,9 @@ class Panel_Devolucion extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Regresa al panel principal de Docente/Empleado.
+     */
     private void volver() {
         Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
         if (ventana != null) {

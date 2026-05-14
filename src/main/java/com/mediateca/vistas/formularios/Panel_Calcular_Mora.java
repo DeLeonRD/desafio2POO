@@ -4,8 +4,8 @@
  */
 package com.mediateca.vistas.formularios;
  
-import com.mediateca.controller.PrestamoController;
 import com.mediateca.db.DatabaseConnection;
+import com.mediateca.service.ConfiguracionService;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.sql.Connection;
@@ -21,22 +21,15 @@ import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
  
 /**
- *
- * @author Francisco De la O Gonzalez - DG200722
- *
+ * Panel para calcular la mora de préstamos activos.
+ * 
  * Flujo del panel:
- *   1. Usuario ingresa el carnet (id_usuario) y clic en BUSCAR -> carga sus
- *      préstamos activos/vencidos en la tabla.
- *   2. Usuario selecciona una fila y hace clic en "Seleccionar" -> calcula
- *      días de retraso y costo de mora, los muestra en los campos inferiores.
- *
- *   jTextField1 -> Carnet (id_usuario)
- *   jTextField2 -> Días de Mora (output, no editable)
- *   jLabel5     -> Costo de Mora (output)
- *   jTable1     -> Préstamos del usuario
- *   jButton1    -> BUSCAR
- *   jButton5, jButton6, jButton7 -> Seleccionar (los 3 hacen lo mismo: calcular
- *                                                mora para la fila seleccionada)
+ *   1. El usuario ingresa el carnet (ID de usuario) y hace clic en BUSCAR.
+ *      Se cargan los préstamos activos o vencidos del usuario en la tabla.
+ *   2. El usuario selecciona una fila de la tabla y hace clic en "Seleccionar".
+ *      Se calculan los días de retraso y el costo de mora, mostrándolos en los campos inferiores.
+ * 
+ * La mora se calcula como: días de retraso × valor de mora por día (configurado en el sistema).
  */
 public class Panel_Calcular_Mora extends javax.swing.JPanel {
  
@@ -47,8 +40,6 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         "Fecha Devolución Esperada", "Estado"
     };
  
-    private final PrestamoController prestamoController = new PrestamoController();
- 
     /**
      * Creates new form Panel_Calcular_Mora
      */
@@ -56,10 +47,13 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         initComponents();
         configurarTabla();
         jTextField2.setEditable(false);
-        jLabel5.setText(""); // limpiar placeholder "jLabel5"
+        jLabel5.setText("");
         cablearEventos();
     }
  
+    /**
+     * Configura la tabla con las columnas definidas.
+     */
     private void configurarTabla() {
         DefaultTableModel modelo = new DefaultTableModel(COLUMNAS, 0) {
             @Override
@@ -70,11 +64,13 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         jTable1.setModel(modelo);
     }
  
+    /**
+     * Conecta los botones del panel con sus respectivas acciones.
+     */
     private void cablearEventos() {
         jButton1.addActionListener(e -> buscarPrestamos());
  
-        // Los 3 botones "Seleccionar" hacen lo mismo: calcular mora para la
-        // fila actualmente seleccionada en la tabla.
+        // Los tres botones "Seleccionar" realizan la misma acción
         java.awt.event.ActionListener calcularSelec = e -> calcularMoraDeSeleccionada();
         jButton5.addActionListener(calcularSelec);
         jButton6.addActionListener(calcularSelec);
@@ -88,7 +84,7 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         String carnetTxt = jTextField1.getText().trim();
         if (carnetTxt.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                "Ingresa el carnet (id de usuario).",
+                "Ingresa el carnet (ID de usuario).",
                 "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -98,7 +94,7 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
             idUsuario = Integer.parseInt(carnetTxt);
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this,
-                "El carnet debe ser numérico.",
+                "El carnet debe ser un número entero.",
                 "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -109,11 +105,12 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         jLabel5.setText("");
  
         String sql = "SELECT p.id_prestamo, p.id_material, m.titulo, " +
-                     "       p.fecha_prestamo, p.fecha_devolucion_esperada, p.estado " +
+                     "p.fecha_prestamo, p.fecha_devolucion_esperada, p.estado " +
                      "FROM prestamos p " +
                      "JOIN material m ON m.id = p.id_material " +
                      "WHERE p.id_usuario = ? AND p.estado IN ('ACTIVO', 'VENCIDO') " +
                      "ORDER BY p.fecha_devolucion_esperada";
+        
         try (Connection conn = DatabaseConnection.getInstancia().getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, idUsuario);
@@ -132,21 +129,21 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
                 }
                 if (count == 0) {
                     JOptionPane.showMessageDialog(this,
-                        "El usuario no tiene préstamos activos.",
+                        "El usuario no tiene préstamos activos o vencidos.",
                         "Sin préstamos", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
         } catch (SQLException ex) {
             logger.log(Level.SEVERE, "Error al buscar préstamos del usuario", ex);
             JOptionPane.showMessageDialog(this,
-                "Error de BD: " + ex.getMessage(),
+                "Error al consultar la base de datos: " + ex.getMessage(),
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
  
     /**
-     * Toma la fila seleccionada del JTable y calcula la mora usando
-     * {@link PrestamoController#calcularMora}.
+     * Toma la fila seleccionada del JTable, calcula los días de retraso
+     * y aplica la fórmula de mora: días retraso × valor mora por día.
      */
     private void calcularMoraDeSeleccionada() {
         int fila = jTable1.getSelectedRow();
@@ -161,12 +158,11 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
             DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
             int idPrestamo = (Integer) modelo.getValueAt(fila, 0);
             int idMaterial = (Integer) modelo.getValueAt(fila, 1);
-            Object fechaObj = modelo.getValueAt(fila, 4); // Fecha Devolución Esperada
+            Object fechaObj = modelo.getValueAt(fila, 4);
  
-            // El ResultSet devuelve java.sql.Date — lo convertimos a LocalDate
-            // para los días de retraso, y lo pasamos directo al controller.
             Date fechaSQL;
             LocalDate fechaEsperada;
+            
             if (fechaObj instanceof Date) {
                 fechaSQL = (Date) fechaObj;
                 fechaEsperada = fechaSQL.toLocalDate();
@@ -181,7 +177,11 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
             long diasRetraso = hoy.isAfter(fechaEsperada)
                 ? ChronoUnit.DAYS.between(fechaEsperada, hoy) : 0;
  
-            double mora = prestamoController.calcularMora(idPrestamo, idMaterial, fechaSQL);
+            // Obtener el valor de mora por día desde la configuración
+            double valorMoraPorDia = ConfiguracionService.getMoraPorDia();
+            
+            // Fórmula: mora = días de retraso × valor de mora por día
+            double mora = diasRetraso * valorMoraPorDia;
  
             jTextField2.setText(String.valueOf(diasRetraso));
             jLabel5.setText(String.format("$%.2f", mora));
@@ -189,25 +189,20 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al calcular mora", ex);
             JOptionPane.showMessageDialog(this,
-                "Error al calcular mora: " + ex.getMessage(),
+                "Error al calcular la mora: " + ex.getMessage(),
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
  
-    @SuppressWarnings("unused")
+    /**
+     * Regresa al menú principal del administrador.
+     */
     private void volverAlMenu() {
         Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
     }
  
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-
         jLabel4 = new javax.swing.JLabel();
         jLabel1 = new javax.swing.JLabel();
         jTextField1 = new javax.swing.JTextField();
@@ -224,43 +219,44 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
 
         setMinimumSize(new java.awt.Dimension(1075, 650));
 
-        jLabel4.setFont(new java.awt.Font("Arial Black", 0, 36)); // NOI18N
+        jLabel4.setFont(new java.awt.Font("Arial Black", 0, 36));
         jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel4.setText("CALCULAR MORA");
 
+        jLabel1.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel1.setText("Carnet");
 
+        jTextField1.setFont(new java.awt.Font("Arial", 0, 14));
+
+        jLabel2.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel2.setText("Dias de Mora");
 
-        jTable1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jTextField2.setFont(new java.awt.Font("Arial", 0, 14));
+
+        jTable1.setFont(new java.awt.Font("Arial", 0, 14));
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
+            new Object[][] { {null, null, null, null}, {null, null, null, null}, {null, null, null, null} },
+            new String[] { "Title 1", "Title 2", "Title 3", "Title 4" }
         ));
         jScrollPane1.setViewportView(jTable1);
 
-        jButton5.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jButton5.setFont(new java.awt.Font("Arial", 0, 14));
         jButton5.setText("Seleccionar");
 
-        jButton6.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jButton6.setFont(new java.awt.Font("Arial", 0, 14));
         jButton6.setText("Seleccionar");
 
-        jButton7.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jButton7.setFont(new java.awt.Font("Arial", 0, 14));
         jButton7.setText("Seleccionar");
 
+        jButton1.setFont(new java.awt.Font("Arial", 0, 14));
         jButton1.setText("BUSCAR");
-        jButton1.addActionListener(this::jButton1ActionPerformed);
 
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
+        jLabel3.setFont(new java.awt.Font("Arial", 0, 18));
         jLabel3.setText("Costo Mora");
 
-        jLabel5.setText("jLabel5");
+        jLabel5.setFont(new java.awt.Font("Arial", 0, 18));
+        jLabel5.setText("");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -268,39 +264,38 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, 1065, Short.MAX_VALUE)
+                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(4, 4, 4))
             .addGroup(layout.createSequentialGroup()
                 .addGap(58, 58, 58)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 349, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(18, 18, 18)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jButton5)
                                     .addComponent(jButton6)
-                                    .addComponent(jButton7)))
+                                    .addComponent(jButton7))
+                                .addGap(0, 0, Short.MAX_VALUE))
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(226, 226, 226)
                                 .addComponent(jLabel3)
-                                .addGap(39, 39, 39)
-                                .addComponent(jLabel5)))
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(18, 18, 18)
+                                .addComponent(jLabel5)
+                                .addGap(0, 0, Short.MAX_VALUE)))
+                        .addContainerGap())
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel2)
-                                .addGap(18, 18, 18)
-                                .addComponent(jTextField2))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(jLabel1)
-                                .addGap(18, 18, 18)
-                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(jLabel1)
+                        .addGap(18, 18, 18)
+                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(64, 64, 64)
                         .addComponent(jButton1)
-                        .addGap(691, 691, 691))))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jLabel2)
+                        .addGap(18, 18, 18)
+                        .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(57, 57, 57))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -308,41 +303,30 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
                 .addContainerGap()
                 .addComponent(jLabel4)
                 .addGap(94, 94, 94)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton1)
+                    .addComponent(jLabel2)
+                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 307, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel1)
-                            .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel2)
-                            .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(54, 54, 54)
                         .addComponent(jButton5)
                         .addGap(18, 18, 18)
                         .addComponent(jButton6)
                         .addGap(18, 18, 18)
-                        .addComponent(jButton7))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(18, 18, 18)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jLabel3)
-                                .addComponent(jLabel5))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 307, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addComponent(jButton7)
+                        .addGap(32, 32, 32)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel5))))
                 .addContainerGap(108, Short.MAX_VALUE))
         );
-    }// </editor-fold>//GEN-END:initComponents
+    }
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
-
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
+    // Variables declaration - do not modify
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton6;
@@ -356,5 +340,5 @@ public class Panel_Calcular_Mora extends javax.swing.JPanel {
     private javax.swing.JTable jTable1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField2;
-    // End of variables declaration//GEN-END:variables
+    // End of variables declaration
 }

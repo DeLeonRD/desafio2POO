@@ -15,6 +15,10 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 
+/**
+ * Panel principal del administrador.
+ * Contiene el menu lateral con acceso a todas las funciones de gestion.
+ */
 public class Panel_administrador extends javax.swing.JPanel {
 
     public Panel_administrador() {
@@ -30,26 +34,37 @@ public class Panel_administrador extends javax.swing.JPanel {
 
     private void cablearEventos() {
 
+        // Gestion de usuarios
         btnGestionUsuarios.addActionListener(
                 e -> abrirGestionUsuarios()
         );
 
+        // Gestion de materiales
         btnGestionMateriales.addActionListener(
                 e -> abrirGestionMateriales()
         );
 
+        // Consulta de prestamos
         boton_busca_prestam.addActionListener(
                 e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaPest())
         );
 
+        // Configuracion del sistema
         boton_configadmin.addActionListener(
                 e -> Ventana_PPAL.getInstancia().mostrar(new Panel_Configadmin())
         );
 
+        // Reporte de disponibilidad de materiales
         btnReporteDisponibilidad.addActionListener(
                 e -> Ventana_PPAL.getInstancia().mostrar(new Panel_ReporteDisponibilidad())
         );
 
+        // Consulta de logs del sistema
+        btnVerLogs.addActionListener(
+                e -> Ventana_PPAL.getInstancia().mostrar(new Panel_VerLogs())
+        );
+
+        // Cerrar sesion
         btnCerrarSesion.addActionListener(
                 e -> cerrarSesion()
         );
@@ -121,6 +136,8 @@ public class Panel_administrador extends javax.swing.JPanel {
         btnGestionMateriales = new javax.swing.JButton();
 
         btnReporteDisponibilidad = new javax.swing.JButton();
+
+        btnVerLogs = new javax.swing.JButton();
 
         btnCerrarSesion = new javax.swing.JButton();
 
@@ -206,50 +223,65 @@ public class Panel_administrador extends javax.swing.JPanel {
         // BOTONES MENU
         // =====================================================
 
+        // Gestion de usuarios
         configurarBoton(
                 btnGestionUsuarios,
-                "Gestión de Usuarios"
+                "Gestion de Usuarios"
         );
 
         gbcSuperior.gridy = 2;
 
         panelSuperior.add(btnGestionUsuarios, gbcSuperior);
 
+        // Gestion de materiales
         configurarBoton(
                 btnGestionMateriales,
-                "Gestión de Materiales"
+                "Gestion de Materiales"
         );
 
         gbcSuperior.gridy = 3;
 
         panelSuperior.add(btnGestionMateriales, gbcSuperior);
 
+        // Consulta de prestamos
         configurarBoton(
                 boton_busca_prestam,
-                "Préstamos"
+                "Prestamos"
         );
 
         gbcSuperior.gridy = 4;
 
         panelSuperior.add(boton_busca_prestam, gbcSuperior);
 
+        // Configuracion del sistema
         configurarBoton(
                 boton_configadmin,
-                "Configuración"
+                "Configuracion"
         );
 
         gbcSuperior.gridy = 5;
 
         panelSuperior.add(boton_configadmin, gbcSuperior);
 
+        // Reporte de disponibilidad
         configurarBoton(
                 btnReporteDisponibilidad,
-                "📊 Ver Disponibilidad"
+                "Ver Disponibilidad"
         );
 
         gbcSuperior.gridy = 6;
 
         panelSuperior.add(btnReporteDisponibilidad, gbcSuperior);
+
+        // Consulta de logs del sistema
+        configurarBoton(
+                btnVerLogs,
+                "Ver Logs del Sistema"
+        );
+
+        gbcSuperior.gridy = 7;
+
+        panelSuperior.add(btnVerLogs, gbcSuperior);
 
         // =====================================================
         // ESPACIADOR TRANSPARENTE
@@ -259,7 +291,7 @@ public class Panel_administrador extends javax.swing.JPanel {
 
         gbcGlue.gridx = 0;
 
-        gbcGlue.gridy = 7;
+        gbcGlue.gridy = 8;
 
         gbcGlue.weighty = 1.0;
 
@@ -289,7 +321,7 @@ public class Panel_administrador extends javax.swing.JPanel {
 
         configurarBoton(
                 btnCerrarSesion,
-                "Cerrar Sesión"
+                "Cerrar Sesion"
         );
 
         btnCerrarSesion.setBackground(
@@ -340,9 +372,9 @@ public class Panel_administrador extends javax.swing.JPanel {
 
         lblDescripcion.setText(
                 "<html><div style='text-align:center;'>"
-                + "Bienvenido al sistema de gestión de la Mediateca Don Bosco.<br><br>"
+                + "Bienvenido al sistema de gestion de la Mediateca Don Bosco.<br><br>"
                 + "Desde este panel puede administrar usuarios, materiales,<br>"
-                + "préstamos y configuraciones del sistema."
+                + "prestamos, configuraciones y consultar logs del sistema."
                 + "</div></html>"
         );
 
@@ -390,6 +422,7 @@ public class Panel_administrador extends javax.swing.JPanel {
     private javax.swing.JButton btnGestionMateriales;
     private javax.swing.JButton btnGestionUsuarios;
     private javax.swing.JButton btnReporteDisponibilidad;
+    private javax.swing.JButton btnVerLogs;
     private javax.swing.JButton boton_busca_prestam;
     private javax.swing.JButton boton_configadmin;
     private javax.swing.JLabel lblBienvenida;

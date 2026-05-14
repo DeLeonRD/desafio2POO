@@ -4,8 +4,6 @@
  */
 package com.mediateca.vistas.formularios;
  
-import com.mediateca.dao.LibroDAO;
-import com.mediateca.model.Libro;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.logging.Level;
@@ -26,17 +24,17 @@ import javax.swing.JOptionPane;
  * se guardan en BD.
  *
  * Si el equipo backend agrega más adelante un TesisDAO con su tabla, hay
- * que reemplazar LibroDAO por TesisDAO aquí.
+ * que reemplazar la lógica aquí.
  *
  * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
- *   jTextField1  -> Titulo               -> Libro.titulo       ✓ SE GUARDA
- *   jTextField2  -> Año Defensa          -> Libro.anio         ✓ SE GUARDA
+ *   jTextField1  -> Titulo               -> material.titulo     ✓ SE GUARDA
+ *   jTextField2  -> Año Defensa          -> material.anio_publicacion ✓ SE GUARDA
  *   jTextField3  -> Ubicación Física     -> NO se guarda
  *   jTextField4  -> Total de Ejemplares  -> NO se guarda
  *   jTextField5  -> Disponibilidad       -> NO se guarda
  *   jTextField6  -> Estado               -> NO se guarda
  *   jTextField7  -> Fecha de Registro    -> NO se guarda
- *   jTextField8  -> Autor                -> Libro.autor        ✓ SE GUARDA
+ *   jTextField8  -> Autor                -> material.autor       ✓ SE GUARDA
  *   jTextField9  -> Asesor               -> NO se guarda
  *   jTextField10 -> Grado Académico      -> NO se guarda
  *   jTextField11 -> Universidad          -> NO se guarda
@@ -53,9 +51,6 @@ import javax.swing.JOptionPane;
 public class Panel_ingresotesis extends javax.swing.JPanel {
  
     private static final Logger logger = Logger.getLogger(Panel_ingresotesis.class.getName());
- 
-    // Tesis se guarda como Libro porque el backend no tiene TesisDAO.
-    private final LibroDAO libroDAO = new LibroDAO();
  
     /**
      * Creates new form Panel_ingresolibro
@@ -94,23 +89,26 @@ public class Panel_ingresotesis extends javax.swing.JPanel {
         }
  
         try {
-            // La tesis se guarda como Libro hasta que exista TesisDAO en el backend.
-            Libro libro = new Libro();
-            libro.setTitulo(titulo);
-            libro.setAutor(autor);
-            libro.setAnio(anio);
+            // La tesis se guarda como Libro hasta que exista soporte específico en el backend.
+            String sql = "INSERT INTO material (tipo, titulo, autor, anio_publicacion, cantidad_total, cantidad_disponible) VALUES ('LIBRO', ?, ?, ?, ?, ?)";
+            try (var conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
+                 var pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, titulo);
+                pstmt.setString(2, autor);
+                pstmt.setInt(3, anio);
+                pstmt.setInt(4, 1);
+                pstmt.setInt(5, 1);
+                pstmt.executeUpdate();
  
-            libroDAO.insertar(libro);
- 
-            JOptionPane.showMessageDialog(this,
-                "Operación de registro enviada al backend.\n\n" +
-                "AVISO: la tesis se guardó como Libro porque el backend no\n" +
-                "tiene soporte específico para tesis. Solo se persistieron:\n" +
-                "  - Título, Autor, Año de Defensa\n\n" +
-                "El resto de los campos (asesor, universidad, etc.) no se guardó.",
-                "Registro de tesis", JOptionPane.WARNING_MESSAGE);
-            limpiarCampos();
- 
+                JOptionPane.showMessageDialog(this,
+                    "Operación de registro enviada al backend.\n\n" +
+                    "AVISO: la tesis se guardó como Libro porque el backend no\n" +
+                    "tiene soporte específico para tesis. Solo se persistieron:\n" +
+                    "  - Título, Autor, Año de Defensa\n\n" +
+                    "El resto de los campos (asesor, universidad, etc.) no se guardó.",
+                    "Registro de tesis", JOptionPane.WARNING_MESSAGE);
+                limpiarCampos();
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al registrar tesis", ex);
             mostrarError("Error inesperado: " + ex.getMessage());

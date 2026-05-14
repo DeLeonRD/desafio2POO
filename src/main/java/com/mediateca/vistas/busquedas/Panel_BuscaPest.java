@@ -4,8 +4,8 @@
  */
 package com.mediateca.vistas.busquedas;
 
-import com.mediateca.dao.PrestamoDAO;
-import com.mediateca.dao.TipoMaterialDAO;
+import com.mediateca.service.PrestamoService;
+import com.mediateca.service.TipoMaterialService;
 import com.mediateca.model.Usuario;
 import com.mediateca.util.SessionManager;
 import com.mediateca.vistas.Panel_administrador;
@@ -22,8 +22,6 @@ import javax.swing.table.DefaultTableModel;
 public class Panel_BuscaPest extends javax.swing.JPanel {
 
     private static final Logger logger = Logger.getLogger(Panel_BuscaPest.class.getName());
-    private final PrestamoDAO prestamoDAO = new PrestamoDAO();
-    private final TipoMaterialDAO tipoMaterialDAO = new TipoMaterialDAO();
 
     public Panel_BuscaPest() {
         initComponents();
@@ -42,8 +40,7 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
             }
         };
         tblPrestamos.setModel(modelo);
-        
-        // Ajustar anchos de columna
+
         tblPrestamos.getColumnModel().getColumn(0).setPreferredWidth(50);
         tblPrestamos.getColumnModel().getColumn(1).setPreferredWidth(70);
         tblPrestamos.getColumnModel().getColumn(2).setPreferredWidth(120);
@@ -58,7 +55,7 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
     private void cargarTiposMateriales() {
         cmbTipo.removeAllItems();
         cmbTipo.addItem("-- Todos --");
-        List<String> tipos = tipoMaterialDAO.listarTipos();
+        List<String> tipos = TipoMaterialService.listarTipos();
         for (String tipo : tipos) {
             cmbTipo.addItem(tipo);
         }
@@ -74,7 +71,7 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
         String carnetTxt = txtCarnet.getText().trim();
         String nombre = txtNombre.getText().trim();
         String tipo = (String) cmbTipo.getSelectedItem();
-        
+
         if ("-- Todos --".equals(tipo)) {
             tipo = null;
         }
@@ -92,11 +89,11 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
         }
 
         try {
-            List<Object[]> filas = prestamoDAO.buscarPrestamos(idUsuario, nombre.isEmpty() ? null : nombre, tipo);
-            
+            List<Object[]> filas = PrestamoService.buscarPrestamos(idUsuario, nombre.isEmpty() ? null : nombre, tipo);
+
             DefaultTableModel modelo = (DefaultTableModel) tblPrestamos.getModel();
             modelo.setRowCount(0);
-            
+
             for (Object[] fila : filas) {
                 String estado = (String) fila[7];
                 String estadoMostrar;
@@ -113,24 +110,24 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
                     default:
                         estadoMostrar = estado;
                 }
-                
+
                 double mora = (double) fila[8];
                 String moraStr = String.format("$%.2f", mora);
-                
+
                 modelo.addRow(new Object[]{
                     fila[0], fila[1], fila[2], fila[3], fila[4],
                     fila[5], fila[6], estadoMostrar, moraStr
                 });
             }
-            
+
             if (filas.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                     "No se encontraron préstamos con esos filtros.",
                     "Sin resultados", JOptionPane.INFORMATION_MESSAGE);
             }
-            
+
             lblResultados.setText("Resultados: " + modelo.getRowCount() + " préstamos encontrados");
-            
+
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al buscar préstamos", ex);
             JOptionPane.showMessageDialog(this,
@@ -151,16 +148,16 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
     private void volverAlMenu() {
         Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
         if (ventana == null) return;
-        
+
         Usuario usuarioActual = SessionManager.getUsuarioActual();
-        
+
         if (usuarioActual == null) {
             ventana.mostrar(new Panel_Bienvenida());
             return;
         }
-        
+
         String tipo = usuarioActual.getTipo();
-        
+
         switch (tipo) {
             case "ADMIN":
                 ventana.mostrar(new Panel_administrador());
@@ -179,7 +176,6 @@ public class Panel_BuscaPest extends javax.swing.JPanel {
 
     @SuppressWarnings("unchecked")
     private void initComponents() {
-
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();

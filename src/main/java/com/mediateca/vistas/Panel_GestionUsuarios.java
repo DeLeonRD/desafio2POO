@@ -4,9 +4,9 @@
  */
 package com.mediateca.vistas;
 
-import com.mediateca.dao.UsuarioDAO;
 import com.mediateca.model.Usuario;
-import com.mediateca.dao.TipoUsuarioDAO;
+import com.mediateca.service.TipoUsuarioService;
+import com.mediateca.service.UsuarioService;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.List;
 import javax.swing.JOptionPane;
@@ -14,21 +14,20 @@ import javax.swing.table.DefaultTableModel;
 
 public class Panel_GestionUsuarios extends javax.swing.JPanel {
 
-    private UsuarioDAO usuarioDAO = new UsuarioDAO();
-    private TipoUsuarioDAO tipoUsuarioDAO = new TipoUsuarioDAO();
     private int usuarioSeleccionadoId = -1;
 
     public Panel_GestionUsuarios() {
         initComponents();
         cargarTablaUsuarios();
         cargarComboTipos();
+        limpiarFormulario();
     }
 
     private void cargarTablaUsuarios() {
         DefaultTableModel model = (DefaultTableModel) tblUsuarios.getModel();
         model.setRowCount(0);
         
-        List<Usuario> usuarios = usuarioDAO.listarTodos();
+        List<Usuario> usuarios = UsuarioService.listarTodos();
         for (Usuario u : usuarios) {
             model.addRow(new Object[]{
                 u.getIdUsuario(),
@@ -43,7 +42,7 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
 
     private void cargarComboTipos() {
         cmbTipo.removeAllItems();
-        List<String> tipos = tipoUsuarioDAO.listarTipos();
+        List<String> tipos = TipoUsuarioService.listarTipos();
         for (String tipo : tipos) {
             cmbTipo.addItem(tipo);
         }
@@ -71,6 +70,108 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
         cmbTipo.setSelectedItem(u.getTipo());
         usuarioSeleccionadoId = u.getIdUsuario();
         btnEliminar.setEnabled(true);
+    }
+
+    private void guardarUsuario() {
+        String nombre = txtNombre.getText().trim();
+        String email = txtEmail.getText().trim();
+        String password = txtPassword.getText().trim();
+        String tipo = (String) cmbTipo.getSelectedItem();
+        String carrera = txtCarrera.getText().trim();
+        String telefono = txtTelefono.getText().trim();
+
+        if (nombre.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nombre, email y contraseña son obligatorios.");
+            return;
+        }
+
+        if (usuarioSeleccionadoId == -1) {
+            // Nuevo usuario
+            if (UsuarioService.existeEmail(email)) {
+                JOptionPane.showMessageDialog(this, "El email ya está registrado.");
+                return;
+            }
+            Usuario u = new Usuario();
+            u.setNombre(nombre);
+            u.setEmail(email);
+            u.setContrasena(password);
+            u.setTipo(tipo);
+            u.setCarrera(carrera.isEmpty() ? null : carrera);
+            u.setTelefono(telefono.isEmpty() ? null : telefono);
+            if (UsuarioService.insertar(u)) {
+                JOptionPane.showMessageDialog(this, "Usuario creado exitosamente.");
+                limpiarFormulario();
+                cargarTablaUsuarios();
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al crear usuario.");
+            }
+        } else {
+            // Editar usuario existente
+            Usuario u = UsuarioService.obtenerPorId(usuarioSeleccionadoId);
+            if (u != null) {
+                u.setNombre(nombre);
+                u.setEmail(email);
+                if (!password.isEmpty()) {
+                    u.setContrasena(password);
+                }
+                u.setTipo(tipo);
+                u.setCarrera(carrera.isEmpty() ? null : carrera);
+                u.setTelefono(telefono.isEmpty() ? null : telefono);
+                if (UsuarioService.actualizar(u)) {
+                    JOptionPane.showMessageDialog(this, "Usuario actualizado exitosamente.");
+                    limpiarFormulario();
+                    cargarTablaUsuarios();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar usuario.");
+                }
+            }
+        }
+    }
+
+    private void eliminarUsuario() {
+        if (usuarioSeleccionadoId == -1) return;
+        int confirm = JOptionPane.showConfirmDialog(this, "¿Eliminar este usuario?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            if (UsuarioService.eliminar(usuarioSeleccionadoId)) {
+                JOptionPane.showMessageDialog(this, "Usuario eliminado.");
+                limpiarFormulario();
+                cargarTablaUsuarios();
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al eliminar usuario.");
+            }
+        }
+    }
+
+    private void restablecerContrasena() {
+        if (usuarioSeleccionadoId == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccione un usuario primero.");
+            return;
+        }
+        String nuevaPass = JOptionPane.showInputDialog(this, "Ingrese nueva contraseña:");
+        if (nuevaPass != null && !nuevaPass.trim().isEmpty()) {
+            // Actualizar directamente en BD
+            String sql = "UPDATE usuarios SET contrasena = ? WHERE id_usuario = ?";
+            try (java.sql.Connection conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
+                 java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, nuevaPass);
+                pstmt.setInt(2, usuarioSeleccionadoId);
+                if (pstmt.executeUpdate() > 0) {
+                    JOptionPane.showMessageDialog(this, "Contraseña actualizada.");
+                    txtPassword.setText(nuevaPass);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar contraseña.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void volverAlMenu() {
+        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
+        if (ventana != null) {
+            ventana.mostrar(new Panel_administrador());
+        }
     }
 
     private void initComponents() {
@@ -113,7 +214,7 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
                 int row = tblUsuarios.getSelectedRow();
                 if (row >= 0) {
                     int id = (int) tblUsuarios.getValueAt(row, 0);
-                    Usuario u = usuarioDAO.obtenerPorId(id);
+                    Usuario u = UsuarioService.obtenerPorId(id);
                     if (u != null) {
                         cargarUsuarioEnFormulario(u);
                     }
@@ -133,13 +234,19 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Nombre:");
 
+        txtNombre.setFont(new java.awt.Font("Arial", 0, 14));
+
         jLabel4.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Email:");
 
+        txtEmail.setFont(new java.awt.Font("Arial", 0, 14));
+
         jLabel5.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel5.setForeground(new java.awt.Color(255, 255, 255));
         jLabel5.setText("Contraseña:");
+
+        txtPassword.setFont(new java.awt.Font("Arial", 0, 14));
 
         jLabel6.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel6.setForeground(new java.awt.Color(255, 255, 255));
@@ -151,9 +258,13 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
         jLabel7.setForeground(new java.awt.Color(255, 255, 255));
         jLabel7.setText("Carrera:");
 
+        txtCarrera.setFont(new java.awt.Font("Arial", 0, 14));
+
         jLabel8.setFont(new java.awt.Font("Arial", 0, 14));
         jLabel8.setForeground(new java.awt.Color(255, 255, 255));
         jLabel8.setText("Teléfono:");
+
+        txtTelefono.setFont(new java.awt.Font("Arial", 0, 14));
 
         btnGuardar.setBackground(new java.awt.Color(0, 102, 204));
         btnGuardar.setFont(new java.awt.Font("Arial", 1, 12));
@@ -286,100 +397,6 @@ public class Panel_GestionUsuarios extends javax.swing.JPanel {
                         .addComponent(btnCerrar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(20, Short.MAX_VALUE))
         );
-    }
-
-    private void guardarUsuario() {
-        String nombre = txtNombre.getText().trim();
-        String email = txtEmail.getText().trim();
-        String password = txtPassword.getText().trim();
-        String tipo = (String) cmbTipo.getSelectedItem();
-        String carrera = txtCarrera.getText().trim();
-        String telefono = txtTelefono.getText().trim();
-
-        if (nombre.isEmpty() || email.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nombre, email y contraseña son obligatorios.");
-            return;
-        }
-
-        if (usuarioSeleccionadoId == -1) {
-            // Nuevo usuario
-            if (usuarioDAO.existeEmail(email)) {
-                JOptionPane.showMessageDialog(this, "El email ya está registrado.");
-                return;
-            }
-            Usuario u = new Usuario();
-            u.setNombre(nombre);
-            u.setEmail(email);
-            u.setContrasena(password);
-            u.setTipo(tipo);
-            u.setCarrera(carrera.isEmpty() ? null : carrera);
-            u.setTelefono(telefono.isEmpty() ? null : telefono);
-            if (usuarioDAO.insertar(u)) {
-                JOptionPane.showMessageDialog(this, "Usuario creado exitosamente.");
-                limpiarFormulario();
-                cargarTablaUsuarios();
-            } else {
-                JOptionPane.showMessageDialog(this, "Error al crear usuario.");
-            }
-        } else {
-            // Editar usuario existente
-            Usuario u = usuarioDAO.obtenerPorId(usuarioSeleccionadoId);
-            if (u != null) {
-                u.setNombre(nombre);
-                u.setEmail(email);
-                if (!password.isEmpty()) {
-                    u.setContrasena(password);
-                }
-                u.setTipo(tipo);
-                u.setCarrera(carrera.isEmpty() ? null : carrera);
-                u.setTelefono(telefono.isEmpty() ? null : telefono);
-                if (usuarioDAO.actualizar(u)) {
-                    JOptionPane.showMessageDialog(this, "Usuario actualizado exitosamente.");
-                    limpiarFormulario();
-                    cargarTablaUsuarios();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Error al actualizar usuario.");
-                }
-            }
-        }
-    }
-
-    private void eliminarUsuario() {
-        if (usuarioSeleccionadoId == -1) return;
-        int confirm = JOptionPane.showConfirmDialog(this, "¿Eliminar este usuario?", "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            if (usuarioDAO.eliminar(usuarioSeleccionadoId)) {
-                JOptionPane.showMessageDialog(this, "Usuario eliminado.");
-                limpiarFormulario();
-                cargarTablaUsuarios();
-            } else {
-                JOptionPane.showMessageDialog(this, "Error al eliminar usuario.");
-            }
-        }
-    }
-
-    private void restablecerContrasena() {
-        if (usuarioSeleccionadoId == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un usuario primero.");
-            return;
-        }
-        String nuevaPass = JOptionPane.showInputDialog(this, "Ingrese nueva contraseña:");
-        if (nuevaPass != null && !nuevaPass.trim().isEmpty()) {
-            if (usuarioDAO.restablecerContrasena(usuarioSeleccionadoId, nuevaPass)) {
-                JOptionPane.showMessageDialog(this, "Contraseña actualizada.");
-                // Actualizar el campo en el formulario
-                txtPassword.setText(nuevaPass);
-            } else {
-                JOptionPane.showMessageDialog(this, "Error al actualizar contraseña.");
-            }
-        }
-    }
-
-    private void volverAlMenu() {
-        Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
-        if (ventana != null) {
-            ventana.mostrar(new Panel_administrador());
-        }
     }
 
     // Variables declaration

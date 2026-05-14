@@ -1,70 +1,47 @@
-
 package com.mediateca.vistas.formularios;
- 
-import com.mediateca.dao.UsuarioDAO;
+
+import com.mediateca.service.UsuarioService;
 import com.mediateca.model.Usuario;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
- 
+
 /**
- *
- * @author Francisco De la O Gonzalez - DG200722
- *
- * MAPEO DE CAMPOS (basado en orden de creación y labels del form):
- *   jTextField1 -> Carnet           (no se guarda en BD)
- *   jTextField2 -> Nombre Completo  -> Usuario.nombre
- *   jTextField3 -> Correo           -> Usuario.email
- *   jTextField4 -> Telefono         -> Usuario.telefono
- *   jTextField5 -> Usuario          (no se guarda en BD)
- *   jTextField6 -> Contraseña       -> Usuario.contrasena
- *   jTextField8 -> Estado           (no se guarda en BD)
- *   jTextField9 -> Escuela          -> Usuario.carrera
- *
- *   jButton1 -> REGISTRAR
- *   jButton2 -> LIMPIAR
- *   jButton3 -> REVISION
- *
- * RECOMENDACIÓN: renombrar los campos en NetBeans (clic derecho > Change
- * Variable Name) a algo como campo_carnet, campo_nombrecomp, etc. para
- * facilitar mantenimiento. Si se renombran, hay que actualizar este archivo.
+ * Panel para el registro de nuevos docentes en el sistema.
+ * Permite ingresar nombre, correo, contraseña, teléfono y carrera del docente.
  */
 public class Panel_ingresodocente extends javax.swing.JPanel {
- 
+
     private static final Logger logger = Logger.getLogger(Panel_ingresodocente.class.getName());
     private static final String REGEX_EMAIL = "^[\\w.\\-]+@[\\w.\\-]+\\.[A-Za-z]{2,}$";
- 
-    private final UsuarioDAO usuarioDAO = new UsuarioDAO();
- 
-    /**
-     * Creates new form Panel_ingresoalum
-     */
+
     public Panel_ingresodocente() {
         initComponents();
         cablearEventos();
     }
- 
-    private void cablearEventos() {
-        jButton1.addActionListener(e -> registrar());        // REGISTRAR
-        jButton2.addActionListener(e -> limpiarCampos());    // LIMPIAR
-        jButton3.addActionListener(e -> revisarEmailEnBD()); // REVISION
-        // No hay boton de cancelar visible en este form; si se agrega, cablear aquí.
-    }
- 
+
     /**
-     * Valida campos y registra un nuevo docente.
-     * Campos sin backend (no se persisten): carnet, usuario, estado.
-     * Se guardan: nombre, email, contrasena, tipo (=PROFESOR), carrera (=Escuela), telefono.
+     * Conecta los botones con sus respectivas acciones.
+     */
+    private void cablearEventos() {
+        botn_registrar.addActionListener(e -> registrar());
+        botn_limpiarcampos.addActionListener(e -> limpiarCampos());
+        botn_cancelar.addActionListener(e -> volverAlMenu());
+        botn_revisar_incongrunDB.addActionListener(e -> revisarEmailEnBD());
+    }
+
+    /**
+     * Valida los campos y registra un nuevo docente en la base de datos.
      */
     private void registrar() {
-        String nombre   = jTextField2.getText().trim();   // Nombre Completo
-        String email    = jTextField3.getText().trim();   // Correo
-        String telefono = jTextField4.getText().trim();   // Telefono
-        String password = jTextField6.getText().trim();   // Contraseña
-        String escuela  = jTextField9.getText().trim();   // Escuela -> carrera
- 
+        String nombre = campo_nombre.getText().trim();
+        String email = campo_correo.getText().trim();
+        String password = campo_contraseña.getText().trim();
+        String telefono = campo_telefono.getText().trim();
+        String carrera = campo_carrera.getText().trim();
+
         if (nombre.isEmpty() || email.isEmpty() || password.isEmpty()) {
             mostrarError("Nombre, correo y contraseña son obligatorios.");
             return;
@@ -77,46 +54,46 @@ public class Panel_ingresodocente extends javax.swing.JPanel {
             mostrarError("La contraseña debe tener al menos 4 caracteres.");
             return;
         }
- 
+
         try {
-            if (usuarioDAO.existeEmail(email)) {
+            if (UsuarioService.existeEmail(email)) {
                 mostrarError("Ya existe un usuario con ese correo.");
                 return;
             }
- 
+
             Usuario nuevo = new Usuario();
             nuevo.setNombre(nombre);
             nuevo.setEmail(email);
             nuevo.setContrasena(password);
             nuevo.setTipo("PROFESOR");
-            nuevo.setCarrera(escuela); // "Escuela" del docente se guarda en columna carrera
+            nuevo.setCarrera(carrera);
             nuevo.setTelefono(telefono);
- 
-            if (usuarioDAO.insertar(nuevo)) {
-                JOptionPane.showMessageDialog(this,
-                    "Docente registrado correctamente.",
-                    "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+
+            if (UsuarioService.insertar(nuevo)) {
+                JOptionPane.showMessageDialog(this, "Docente registrado correctamente.", "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
                 limpiarCampos();
             } else {
-                mostrarError("No se pudo registrar el docente. Revisa los logs.");
+                mostrarError("No se pudo registrar el docente.");
             }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al registrar docente", ex);
             mostrarError("Error de conexión: " + ex.getMessage());
         }
     }
- 
+
+    /**
+     * Verifica si el correo ingresado ya existe en la base de datos.
+     */
     private void revisarEmailEnBD() {
-        String email = jTextField3.getText().trim();
+        String email = campo_correo.getText().trim();
         if (email.isEmpty()) {
             mostrarError("Ingresa un correo para revisarlo.");
             return;
         }
         try {
-            boolean existe = usuarioDAO.existeEmail(email);
+            boolean existe = UsuarioService.existeEmail(email);
             JOptionPane.showMessageDialog(this,
-                existe ? "El correo YA está registrado en la BD."
-                       : "El correo está libre, puede usarse.",
+                existe ? "El correo YA está registrado en la BD." : "El correo está libre, puede usarse.",
                 "Revisión de correo",
                 existe ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
@@ -124,227 +101,194 @@ public class Panel_ingresodocente extends javax.swing.JPanel {
             mostrarError("Error de conexión: " + ex.getMessage());
         }
     }
- 
+
+    /**
+     * Limpia todos los campos del formulario.
+     */
     private void limpiarCampos() {
-        jTextField1.setText(""); // Carnet
-        jTextField2.setText(""); // Nombre Completo
-        jTextField3.setText(""); // Correo
-        jTextField4.setText(""); // Telefono
-        jTextField5.setText(""); // Usuario
-        jTextField6.setText(""); // Contraseña
-        jTextField8.setText(""); // Estado
-        jTextField9.setText(""); // Escuela
-        jTextField2.requestFocus();
+        campo_carnet.setText("");
+        campo_nombre.setText("");
+        campo_correo.setText("");
+        campo_telefono.setText("");
+        campo_contraseña.setText("");
+        campo_carrera.setText("");
+        campo_nombre.requestFocus();
     }
- 
-    @SuppressWarnings("unused")
+
+    /**
+     * Regresa al menú principal del administrador.
+     */
     private void volverAlMenu() {
         Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
     }
- 
+
+    /**
+     * Muestra un mensaje de error en un cuadro de diálogo.
+     */
     private void mostrarError(String mensaje) {
         JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
     }
- 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
 
+    @SuppressWarnings("unchecked")
+    private void initComponents() {
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jTextField2 = new javax.swing.JTextField();
-        jTextField3 = new javax.swing.JTextField();
-        jTextField4 = new javax.swing.JTextField();
-        jTextField5 = new javax.swing.JTextField();
-        jTextField6 = new javax.swing.JTextField();
-        jTextField8 = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        jLabel12 = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
-        jTextField9 = new javax.swing.JTextField();
+        campo_carnet = new javax.swing.JTextField();
+        campo_nombre = new javax.swing.JTextField();
+        campo_correo = new javax.swing.JTextField();
+        campo_telefono = new javax.swing.JTextField();
+        campo_contraseña = new javax.swing.JTextField();
+        campo_carrera = new javax.swing.JTextField();
+        botn_registrar = new javax.swing.JButton();
+        botn_limpiarcampos = new javax.swing.JButton();
+        botn_revisar_incongrunDB = new javax.swing.JButton();
+        jLabel12 = new javax.swing.JLabel();
+        botn_cancelar = new javax.swing.JButton();
 
-        jLabel1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        setBackground(new java.awt.Color(11, 19, 43));
+
+        jLabel1.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setText("Carnet");
 
-        jLabel2.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jLabel2.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
         jLabel2.setText("Nombre Completo");
 
-        jLabel3.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jLabel3.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Correo");
 
-        jLabel4.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jLabel4.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Telefono");
 
-        jLabel5.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel5.setText("Usuario");
-
-        jLabel6.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        jLabel6.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel6.setForeground(new java.awt.Color(255, 255, 255));
         jLabel6.setText("Contraseña");
 
-        jLabel8.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel8.setText("Estado");
+        jLabel9.setFont(new java.awt.Font("Arial", 0, 14));
+        jLabel9.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel9.setText("Carrera");
 
-        jTextField1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jTextField1.addActionListener(this::jTextField1ActionPerformed);
+        campo_carnet.setFont(new java.awt.Font("Arial", 0, 14));
+        campo_nombre.setFont(new java.awt.Font("Arial", 0, 14));
+        campo_correo.setFont(new java.awt.Font("Arial", 0, 14));
+        campo_telefono.setFont(new java.awt.Font("Arial", 0, 14));
+        campo_contraseña.setFont(new java.awt.Font("Arial", 0, 14));
+        campo_carrera.setFont(new java.awt.Font("Arial", 0, 14));
 
-        jTextField2.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        botn_registrar.setText("REGISTRAR");
+        botn_limpiarcampos.setText("LIMPIAR");
+        botn_revisar_incongrunDB.setText("REVISION");
 
-        jTextField3.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jTextField4.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jTextField5.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jTextField6.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jTextField8.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-
-        jButton1.setText("REGISTRAR");
-        jButton1.addActionListener(this::jButton1ActionPerformed);
-
-        jButton2.setText("LIMPIAR");
-
-        jButton3.setText("REVISION");
-
-        jLabel12.setFont(new java.awt.Font("Arial Black", 0, 24)); // NOI18N
+        jLabel12.setFont(new java.awt.Font("Arial Black", 0, 24));
+        jLabel12.setForeground(new java.awt.Color(255, 255, 255));
         jLabel12.setText("REGISTRO DE NUEVO DOCENTE");
 
-        jLabel9.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        jLabel9.setText("Escuela");
-
-        jTextField9.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        botn_cancelar.setText("CANCELAR");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
+        
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(118, 118, 118)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabel12, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(layout.createSequentialGroup()
-                            .addComponent(jLabel2)
-                            .addGap(18, 18, 18)
-                            .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                            .addGap(22, 22, 22)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addComponent(jLabel3)
-                                .addComponent(jLabel1)
-                                .addComponent(jLabel4)
-                                .addComponent(jLabel5)
-                                .addComponent(jLabel6)
-                                .addComponent(jLabel8)
-                                .addComponent(jLabel9))
-                            .addGap(18, 18, 18)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addComponent(jTextField5, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
-                                .addComponent(jTextField6, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
-                                .addComponent(jTextField8, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
-                                .addComponent(jTextField3, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
-                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jTextField9, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)))
-                        .addGroup(layout.createSequentialGroup()
-                            .addGap(87, 87, 87)
-                            .addComponent(jButton3)
-                            .addGap(53, 53, 53)
-                            .addComponent(jButton1)
-                            .addGap(53, 53, 53)
-                            .addComponent(jButton2))))
-                .addContainerGap(426, Short.MAX_VALUE))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel12)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(16, 16, 16)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel2)
+                                .addGap(18, 18, 18)
+                                .addComponent(campo_nombre, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(22, 22, 22)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(jLabel3)
+                                    .addComponent(jLabel1)
+                                    .addComponent(jLabel4)
+                                    .addComponent(jLabel6)
+                                    .addComponent(jLabel9))
+                                .addGap(18, 18, 18)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(campo_carrera, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
+                                    .addComponent(campo_contraseña, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
+                                    .addComponent(campo_correo, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
+                                    .addComponent(campo_carnet, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(campo_telefono, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(87, 87, 87)
+                                .addComponent(botn_revisar_incongrunDB)
+                                .addGap(53, 53, 53)
+                                .addComponent(botn_registrar)
+                                .addGap(53, 53, 53)
+                                .addComponent(botn_limpiarcampos)
+                                .addGap(36, 36, 36)
+                                .addComponent(botn_cancelar)))))
+                .addContainerGap(410, Short.MAX_VALUE))
         );
+        
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(29, 29, 29)
-                .addComponent(jLabel12, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel12)
                 .addGap(33, 33, 33)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(campo_carnet, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(campo_nombre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(campo_correo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(campo_telefono, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel4))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel5))
-                .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(campo_contraseña, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel6))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel9)
-                    .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(21, 21, 21)
+                    .addComponent(campo_carrera, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(168, 168, 168)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel8))
-                .addGap(164, 164, 164)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton3)
-                    .addComponent(jButton1)
-                    .addComponent(jButton2))
-                .addGap(58, 58, 58))
+                    .addComponent(botn_revisar_incongrunDB)
+                    .addComponent(botn_registrar)
+                    .addComponent(botn_limpiarcampos)
+                    .addComponent(botn_cancelar))
+                .addContainerGap(84, Short.MAX_VALUE))
         );
+    }
 
-        getAccessibleContext().setAccessibleName("Panel_ingresouser");
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
-
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
-
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
+    private javax.swing.JButton botn_cancelar;
+    private javax.swing.JButton botn_limpiarcampos;
+    private javax.swing.JButton botn_registrar;
+    private javax.swing.JButton botn_revisar_incongrunDB;
+    private javax.swing.JTextField campo_carnet;
+    private javax.swing.JTextField campo_carrera;
+    private javax.swing.JTextField campo_contraseña;
+    private javax.swing.JTextField campo_correo;
+    private javax.swing.JTextField campo_nombre;
+    private javax.swing.JTextField campo_telefono;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
-    private javax.swing.JTextField jTextField6;
-    private javax.swing.JTextField jTextField8;
-    private javax.swing.JTextField jTextField9;
-    // End of variables declaration//GEN-END:variables
 }

@@ -5,7 +5,7 @@
 package com.mediateca.vistas;
 
 import com.mediateca.db.DatabaseConnection;
-import com.mediateca.dao.TipoMaterialDAO;
+import com.mediateca.service.TipoMaterialService;
 import java.sql.*;
 import java.util.List;
 import javax.swing.JOptionPane;
@@ -13,7 +13,7 @@ import javax.swing.table.DefaultTableModel;
 
 public class Panel_GestionMateriales extends javax.swing.JPanel {
 
-    private TipoMaterialDAO tipoMaterialDAO = new TipoMaterialDAO();
+    // Usando TipoMaterialService en lugar de DAO
     private int materialSeleccionadoId = -1;
 
     public Panel_GestionMateriales() {
@@ -50,7 +50,7 @@ public class Panel_GestionMateriales extends javax.swing.JPanel {
 
     private void cargarComboTipos() {
         cmbTipo.removeAllItems();
-        List<String> tipos = tipoMaterialDAO.listarTipos();
+        List<String> tipos = TipoMaterialService.listarTipos();
         for (String tipo : tipos) {
             cmbTipo.addItem(tipo);
         }

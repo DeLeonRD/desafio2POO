@@ -4,7 +4,7 @@
  */
 package com.mediateca.vistas.formularios;
  
-import com.mediateca.dao.UsuarioDAO;
+import com.mediateca.service.UsuarioService;
 import com.mediateca.model.Usuario;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
@@ -20,8 +20,6 @@ public class Panel_ingresoalumno extends javax.swing.JPanel {
  
     private static final Logger logger = Logger.getLogger(Panel_ingresoalumno.class.getName());
     private static final String REGEX_EMAIL = "^[\\w.\\-]+@[\\w.\\-]+\\.[A-Za-z]{2,}$";
- 
-    private final UsuarioDAO usuarioDAO = new UsuarioDAO();
  
     /**
      * Creates new form Panel_ingresoalum
@@ -65,7 +63,7 @@ public class Panel_ingresoalumno extends javax.swing.JPanel {
         }
  
         try {
-            if (usuarioDAO.existeEmail(email)) {
+            if (UsuarioService.existeEmail(email)) {
                 mostrarError("Ya existe un usuario con ese correo.");
                 return;
             }
@@ -78,7 +76,7 @@ public class Panel_ingresoalumno extends javax.swing.JPanel {
             nuevo.setCarrera(carrera);
             nuevo.setTelefono(telefono);
  
-            if (usuarioDAO.insertar(nuevo)) {
+            if (UsuarioService.insertar(nuevo)) {
                 JOptionPane.showMessageDialog(this,
                     "Alumno registrado correctamente.",
                     "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
@@ -100,7 +98,7 @@ public class Panel_ingresoalumno extends javax.swing.JPanel {
             return;
         }
         try {
-            boolean existe = usuarioDAO.existeEmail(email);
+            boolean existe = UsuarioService.existeEmail(email);
             JOptionPane.showMessageDialog(this,
                 existe ? "El correo YA está registrado en la BD."
                        : "El correo está libre, puede usarse.",

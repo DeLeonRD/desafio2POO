@@ -4,8 +4,8 @@
  */
 package com.mediateca.vistas;
 
-import com.mediateca.dao.ConfiguracionDAO;
-import com.mediateca.dao.ConfiguracionPrestamoDAO;
+import com.mediateca.service.ConfiguracionService;
+import com.mediateca.service.TipoMaterialService;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
@@ -15,9 +15,6 @@ import javax.swing.table.DefaultTableModel;
  */
 public class Panel_Configadmin extends javax.swing.JPanel {
 
-    private ConfiguracionDAO configDAO = new ConfiguracionDAO();
-    private ConfiguracionPrestamoDAO configPrestamoDAO = new ConfiguracionPrestamoDAO();
-
     public Panel_Configadmin() {
         initComponents();
         cargarConfiguraciones();
@@ -25,43 +22,29 @@ public class Panel_Configadmin extends javax.swing.JPanel {
     }
 
     private void cargarConfiguraciones() {
-        // Cargar mora por día
-        txtMoraPorDia.setText(String.valueOf(configDAO.getMoraPorDia()));
-        
-        // Cargar límite de préstamos
-        txtMaxPrestamos.setText(String.valueOf(configDAO.getMaxEjemplaresPrestamo()));
+        txtMoraPorDia.setText(String.valueOf(ConfiguracionService.getMoraPorDia()));
+        txtMaxPrestamos.setText(String.valueOf(ConfiguracionService.getMaxEjemplaresPrestamo()));
     }
 
     private void cargarTablaDiasPrestamo() {
         DefaultTableModel model = (DefaultTableModel) tblDiasPrestamo.getModel();
         model.setRowCount(0);
         
-        // Obtener datos de la tabla configuracion_prestamo
-        String sql = "SELECT * FROM configuracion_prestamo WHERE id_config = 1";
-        try (java.sql.Connection conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
-             java.sql.Statement stmt = conn.createStatement();
-             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                model.addRow(new Object[]{"LIBRO", rs.getInt("dias_libro")});
-                model.addRow(new Object[]{"REVISTA", rs.getInt("dias_revista")});
-                model.addRow(new Object[]{"CD", rs.getInt("dias_cd")});
-                model.addRow(new Object[]{"DVD", rs.getInt("dias_dvd")});
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        // Cargar días de préstamo usando TipoMaterialService
+        String[] tipos = {"LIBRO", "REVISTA", "CD", "DVD"};
+        for (String tipo : tipos) {
+            int dias = TipoMaterialService.getDiasPrestamo(tipo);
+            model.addRow(new Object[]{tipo, dias});
         }
     }
 
     private void guardarMoraPorDia() {
         try {
             double nuevaMora = Double.parseDouble(txtMoraPorDia.getText().trim());
-            String sql = "UPDATE configuracion SET mora_por_dia = ? WHERE id_config = 1";
-            try (java.sql.Connection conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
-                 java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setDouble(1, nuevaMora);
-                if (pstmt.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "Mora por día actualizada a $" + nuevaMora);
-                }
+            if (ConfiguracionService.actualizarMoraPorDia(nuevaMora)) {
+                JOptionPane.showMessageDialog(this, "Mora por día actualizada a $" + nuevaMora);
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al actualizar la mora por día");
             }
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Ingrese un valor numérico válido");
@@ -91,22 +74,14 @@ public class Panel_Configadmin extends javax.swing.JPanel {
     private void guardarDiasPrestamo() {
         try {
             DefaultTableModel model = (DefaultTableModel) tblDiasPrestamo.getModel();
-            int diasLibro = Integer.parseInt(model.getValueAt(0, 1).toString());
-            int diasRevista = Integer.parseInt(model.getValueAt(1, 1).toString());
-            int diasCd = Integer.parseInt(model.getValueAt(2, 1).toString());
-            int diasDvd = Integer.parseInt(model.getValueAt(3, 1).toString());
-
-            String sql = "UPDATE configuracion_prestamo SET dias_libro = ?, dias_revista = ?, dias_cd = ?, dias_dvd = ? WHERE id_config = 1";
-            try (java.sql.Connection conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
-                 java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setInt(1, diasLibro);
-                pstmt.setInt(2, diasRevista);
-                pstmt.setInt(3, diasCd);
-                pstmt.setInt(4, diasDvd);
-                if (pstmt.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "Días de préstamo actualizados correctamente");
-                }
+            String[] tipos = {"LIBRO", "REVISTA", "CD", "DVD"};
+            
+            for (int i = 0; i < tipos.length; i++) {
+                int dias = Integer.parseInt(model.getValueAt(i, 1).toString());
+                ConfiguracionService.actualizarDiasPrestamo(tipos[i], dias);
             }
+            
+            JOptionPane.showMessageDialog(this, "Días de préstamo actualizados correctamente");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
         }

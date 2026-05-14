@@ -4,8 +4,6 @@
  */
 package com.mediateca.vistas.formularios;
  
-import com.mediateca.dao.LibroDAO;
-import com.mediateca.model.Libro;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.logging.Level;
@@ -18,14 +16,14 @@ import javax.swing.JOptionPane;
  *
  * ============================================================================
  * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
- *   jTextField1  -> Titulo               -> Libro.titulo       ✓ SE GUARDA
- *   jTextField2  -> Año de Publicación   -> Libro.anio         ✓ SE GUARDA
- *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
- *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
- *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField1  -> Titulo               -> material.titulo      ✓ SE GUARDA
+ *   jTextField2  -> Año de Publicación   -> material.anio_publicacion ✓ SE GUARDA
+ *   jTextField3  -> Ubicación Física     -> material.ubicacion   ✓ SE GUARDA
+ *   jTextField4  -> Total de Ejemplares  -> material.cantidad_total ✓ SE GUARDA
+ *   jTextField5  -> Disponibilidad       -> material.cantidad_disponible ✓ SE GUARDA
  *   jTextField6  -> Estado               -> NO se guarda en BD
  *   jTextField7  -> Fecha de Registro    -> NO se guarda en BD
- *   jTextField8  -> Autor                -> Libro.autor        ✓ SE GUARDA
+ *   jTextField8  -> Autor                -> material.autor       ✓ SE GUARDA
  *   jTextField9  -> Editorial            -> NO se guarda en BD
  *   jTextField10 -> ISBN                 -> NO se guarda en BD
  *   jTextField11 -> Edición              -> NO se guarda en BD
@@ -36,16 +34,11 @@ import javax.swing.JOptionPane;
  *   jButton2 -> LIMPIAR
  *   jButton3 -> (acción libre, lo uso para "Volver al menú")
  *
- * LIMITACIÓN: el stored procedure `insertar_libro(titulo, autor, anio)` solo
- * acepta 3 parámetros. Los demás campos del form están desconectados del
- * backend; deberían eliminarse del form o ampliarse en BD + modelo + DAO.
  * ============================================================================
  */
 public class Panel_ingresolibro extends javax.swing.JPanel {
  
     private static final Logger logger = Logger.getLogger(Panel_ingresolibro.class.getName());
- 
-    private final LibroDAO libroDAO = new LibroDAO();
  
     /**
      * Creates new form Panel_ingresolibro
@@ -62,13 +55,16 @@ public class Panel_ingresolibro extends javax.swing.JPanel {
     }
  
     /**
-     * Valida los 3 campos requeridos y guarda el libro vía stored procedure.
-     * Solo se persisten: titulo, autor, anio.
+     * Valida los campos requeridos y guarda el libro directamente en BD.
+     * Se persisten: titulo, autor, anio, ubicacion, cantidad_total, cantidad_disponible.
      */
     private void registrar() {
         String titulo = jTextField1.getText().trim();
         String autor  = jTextField8.getText().trim();
         String anioTxt = jTextField2.getText().trim();
+        String ubicacion = jTextField3.getText().trim();
+        String totalTxt = jTextField4.getText().trim();
+        String disponibleTxt = jTextField5.getText().trim();
  
         if (titulo.isEmpty() || autor.isEmpty() || anioTxt.isEmpty()) {
             mostrarError("Título, autor y año son obligatorios.");
@@ -87,26 +83,57 @@ public class Panel_ingresolibro extends javax.swing.JPanel {
             return;
         }
  
+        int totalEjemplares = 1;
+        int disponibles = 1;
+        
+        if (!totalTxt.isEmpty()) {
+            try {
+                totalEjemplares = Integer.parseInt(totalTxt);
+                if (totalEjemplares < 1) {
+                    mostrarError("La cantidad total debe ser al menos 1.");
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                mostrarError("La cantidad total debe ser un número entero.");
+                return;
+            }
+        }
+        
+        if (!disponibleTxt.isEmpty()) {
+            try {
+                disponibles = Integer.parseInt(disponibleTxt);
+                if (disponibles < 0 || disponibles > totalEjemplares) {
+                    mostrarError("La cantidad disponible no puede superar el total ni ser negativa.");
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                mostrarError("La cantidad disponible debe ser un número entero.");
+                return;
+            }
+        } else {
+            disponibles = totalEjemplares;
+        }
+ 
         try {
-            Libro libro = new Libro();
-            libro.setTitulo(titulo);
-            libro.setAutor(autor);
-            libro.setAnio(anio);
+            String sql = "INSERT INTO material (tipo, titulo, autor, anio_publicacion, ubicacion, cantidad_total, cantidad_disponible) VALUES ('LIBRO', ?, ?, ?, ?, ?, ?)";
+            try (var conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
+                 var pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, titulo);
+                pstmt.setString(2, autor);
+                pstmt.setInt(3, anio);
+                pstmt.setString(4, ubicacion.isEmpty() ? null : ubicacion);
+                pstmt.setInt(5, totalEjemplares);
+                pstmt.setInt(6, disponibles);
+                pstmt.executeUpdate();
  
-            // Nota: LibroDAO.insertar() retorna void y atrapa errores internamente.
-            // No hay forma confiable de saber si la inserción tuvo éxito desde aquí.
-            // Si falla, el error aparece en la consola del backend.
-            libroDAO.insertar(libro);
- 
-            JOptionPane.showMessageDialog(this,
-                "Operación de registro enviada al backend.\n" +
-                "Verifica en la BD que el libro fue creado.",
-                "Registro de libro", JOptionPane.INFORMATION_MESSAGE);
-            limpiarCampos();
- 
+                JOptionPane.showMessageDialog(this,
+                    "Libro registrado correctamente.",
+                    "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                limpiarCampos();
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al registrar libro", ex);
-            mostrarError("Error inesperado: " + ex.getMessage());
+            mostrarError("Error al registrar: " + ex.getMessage());
         }
     }
  

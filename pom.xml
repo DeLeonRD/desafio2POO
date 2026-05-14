@@ -46,13 +46,19 @@
                 </configuration>
             </plugin>
 
-            <!-- Plugin para ejecutar la aplicacion -->
+            <!-- Plugin para ejecutar la aplicacion con logs -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.1</version>
                 <configuration>
                     <mainClass>com.mediateca.vistas.Ventana_PPAL</mainClass>
+                    <systemProperties>
+                        <systemProperty>
+                            <key>java.util.logging.config.file</key>
+                            <value>src/main/resources/logging.properties</value>
+                        </systemProperty>
+                    </systemProperties>
                 </configuration>
             </plugin>
 

@@ -4,8 +4,6 @@
  */
 package com.mediateca.vistas.formularios;
  
-import com.mediateca.dao.RevistaDAO;
-import com.mediateca.model.Revista;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
 import java.util.logging.Level;
@@ -18,32 +16,28 @@ import javax.swing.JOptionPane;
  *
  * ============================================================================
  * MAPEO DE CAMPOS (inferido por orden de creación; VERIFICAR visualmente):
- *   jTextField1  -> Titulo               -> Revista.nombre     ✓ SE GUARDA
- *   jTextField2  -> Año de Publicación   -> NO se guarda en BD
- *   jTextField3  -> Ubicación Física     -> NO se guarda en BD
- *   jTextField4  -> Total de Ejemplares  -> NO se guarda en BD
- *   jTextField5  -> Disponibilidad       -> NO se guarda en BD
+ *   jTextField1  -> Titulo               -> material.titulo     ✓ SE GUARDA
+ *   jTextField2  -> Año de Publicación   -> material.anio_publicacion ✓ SE GUARDA
+ *   jTextField3  -> Ubicación Física     -> material.ubicacion   ✓ SE GUARDA
+ *   jTextField4  -> Total de Ejemplares  -> material.cantidad_total ✓ SE GUARDA
+ *   jTextField5  -> Disponibilidad       -> material.cantidad_disponible ✓ SE GUARDA
  *   jTextField6  -> Volumen              -> NO se guarda en BD
  *   jTextField7  -> Fecha de Registro    -> NO se guarda en BD
  *   jTextField8  -> Idioma               -> NO se guarda en BD
  *   jTextField9  -> ISSN                 -> NO se guarda en BD
  *   jTextField10 -> Periodicidad         -> NO se guarda en BD
- *   jTextField11 -> Número                -> Revista.edicion    ✓ SE GUARDA
+ *   jTextField11 -> Número                -> material.edicion    ✓ SE GUARDA
  *   jTextField12 -> Fecha de Publicación -> NO se guarda en BD
  *
  *   jButton1 -> REGISTRAR
  *   jButton2 -> LIMPIAR
  *   jButton3 -> (acción libre, lo uso para "Volver al menú")
  *
- * LIMITACIÓN: el stored procedure `insertar_revista(nombre, edicion)` solo
- * acepta 2 parámetros. Los demás campos están desconectados del backend.
  * ============================================================================
  */
 public class Panel_ingresorevista extends javax.swing.JPanel {
  
     private static final Logger logger = Logger.getLogger(Panel_ingresorevista.class.getName());
- 
-    private final RevistaDAO revistaDAO = new RevistaDAO();
  
     /**
      * Creates new form Panel_ingresolibro
@@ -61,6 +55,10 @@ public class Panel_ingresorevista extends javax.swing.JPanel {
  
     private void registrar() {
         String nombre = jTextField1.getText().trim();   // Titulo
+        String anioTxt = jTextField2.getText().trim(); // Año de Publicación
+        String ubicacion = jTextField3.getText().trim(); // Ubicación
+        String totalTxt = jTextField4.getText().trim();   // Total de Ejemplares
+        String disponibleTxt = jTextField5.getText().trim(); // Disponibilidad
         String numTxt = jTextField11.getText().trim();  // Número (edicion)
  
         if (nombre.isEmpty() || numTxt.isEmpty()) {
@@ -75,23 +73,72 @@ public class Panel_ingresorevista extends javax.swing.JPanel {
             mostrarError("El número debe ser un entero.");
             return;
         }
+        
+        int anio = java.time.Year.now().getValue(); // año actual por defecto
+        if (!anioTxt.isEmpty()) {
+            try {
+                anio = Integer.parseInt(anioTxt);
+                if (anio < 1000 || anio > 9999) {
+                    mostrarError("El año debe tener 4 dígitos.");
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                mostrarError("El año debe ser un número entero.");
+                return;
+            }
+        }
+        
+        int totalEjemplares = 1;
+        int disponibles = 1;
+        
+        if (!totalTxt.isEmpty()) {
+            try {
+                totalEjemplares = Integer.parseInt(totalTxt);
+                if (totalEjemplares < 1) {
+                    mostrarError("La cantidad total debe ser al menos 1.");
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                mostrarError("La cantidad total debe ser un número entero.");
+                return;
+            }
+        }
+        
+        if (!disponibleTxt.isEmpty()) {
+            try {
+                disponibles = Integer.parseInt(disponibleTxt);
+                if (disponibles < 0 || disponibles > totalEjemplares) {
+                    mostrarError("La cantidad disponible no puede superar el total ni ser negativa.");
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                mostrarError("La cantidad disponible debe ser un número entero.");
+                return;
+            }
+        } else {
+            disponibles = totalEjemplares;
+        }
  
         try {
-            Revista revista = new Revista();
-            revista.setNombre(nombre);
-            revista.setEdicion(edicion);
+            String sql = "INSERT INTO material (tipo, titulo, anio_publicacion, ubicacion, cantidad_total, cantidad_disponible, autor) VALUES ('REVISTA', ?, ?, ?, ?, ?, ?)";
+            try (var conn = com.mediateca.db.DatabaseConnection.getInstancia().getConexion();
+                 var pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, nombre);
+                pstmt.setInt(2, anio);
+                pstmt.setString(3, ubicacion.isEmpty() ? null : ubicacion);
+                pstmt.setInt(4, totalEjemplares);
+                pstmt.setInt(5, disponibles);
+                pstmt.setString(6, "N/A"); // autor por defecto
+                pstmt.executeUpdate();
  
-            revistaDAO.insertar(revista);
- 
-            JOptionPane.showMessageDialog(this,
-                "Operación de registro enviada al backend.\n" +
-                "Verifica en la BD que la revista fue creada.",
-                "Registro de revista", JOptionPane.INFORMATION_MESSAGE);
-            limpiarCampos();
- 
+                JOptionPane.showMessageDialog(this,
+                    "Revista registrada correctamente.",
+                    "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                limpiarCampos();
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Error al registrar revista", ex);
-            mostrarError("Error inesperado: " + ex.getMessage());
+            mostrarError("Error al registrar: " + ex.getMessage());
         }
     }
  

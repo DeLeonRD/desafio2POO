@@ -1,14 +1,17 @@
 package com.mediateca.vistas.busquedas;
- 
-import com.mediateca.dao.DocumentoDAO;
+
+import com.mediateca.db.DatabaseConnection;
+import com.mediateca.service.TipoMaterialService;
 import com.mediateca.vistas.Panel_administrador;
 import com.mediateca.vistas.Ventana_PPAL;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
- 
+
 /**
  *
  * @author Francisco De la O Gonzalez - DG200722
@@ -29,14 +32,13 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
         "ID", "Tipo", "Título", "Autor", "Año", "Ubicación", "Total", "Disponibles"
     };
  
-    private final DocumentoDAO documentoDAO = new DocumentoDAO();
- 
     /**
      * Creates new form Panel_BuscaMat
      */
     public Panel_BuscaMat() {
         initComponents();
         configurarTabla();
+        cargarTiposMateriales();
         cablearEventos();
     }
  
@@ -49,6 +51,16 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
             }
         };
         jTable1.setModel(modelo);
+    }
+ 
+    /** Carga los tipos de materiales desde la base de datos */
+    private void cargarTiposMateriales() {
+        combobox_selecciónmaterial_busqueda.removeAllItems();
+        combobox_selecciónmaterial_busqueda.addItem("-- Todos --");
+        List<String> tipos = TipoMaterialService.listarTipos();
+        for (String tipo : tipos) {
+            combobox_selecciónmaterial_busqueda.addItem(tipo);
+        }
     }
  
     private void cablearEventos() {
@@ -72,8 +84,12 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
     /** Ejecuta la búsqueda con los filtros llenos y vuelca el resultado a la tabla. */
     private void buscar() {
         String titulo = campo_titulomaterial_busqueda.getText().trim();
-        String tipo   = (String) combobox_selecciónmaterial_busqueda.getSelectedItem();
+        String tipo = (String) combobox_selecciónmaterial_busqueda.getSelectedItem();
         String codTxt = campo_codigomaterial_busqueda.getText().trim();
+        
+        if ("-- Todos --".equals(tipo)) {
+            tipo = null;
+        }
  
         int idMaterial = -1;
         if (!codTxt.isEmpty()) {
@@ -88,7 +104,7 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
         }
  
         try {
-            List<Object[]> filas = documentoDAO.buscarMateriales(titulo, tipo, idMaterial);
+            List<Object[]> filas = buscarMateriales(titulo, tipo, idMaterial);
  
             DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
             modelo.setRowCount(0); // limpiar tabla
@@ -109,6 +125,59 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
         }
     }
  
+    /** Método que realiza la consulta SQL directa a la base de datos */
+    private List<Object[]> buscarMateriales(String titulo, String tipo, int idMaterial) {
+        List<Object[]> resultados = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, tipo, titulo, autor, anio_publicacion, ubicacion, cantidad_total, cantidad_disponible " +
+            "FROM material WHERE 1=1 "
+        );
+        
+        List<Object> params = new ArrayList<>();
+        
+        if (idMaterial > 0) {
+            sql.append("AND id = ? ");
+            params.add(idMaterial);
+        }
+        
+        if (titulo != null && !titulo.isEmpty()) {
+            sql.append("AND titulo LIKE ? ");
+            params.add("%" + titulo + "%");
+        }
+        
+        if (tipo != null && !tipo.isEmpty()) {
+            sql.append("AND tipo = ? ");
+            params.add(tipo);
+        }
+        
+        sql.append("ORDER BY tipo, titulo");
+        
+        try (Connection conn = DatabaseConnection.getInstancia().getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
+            }
+            
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Object[] fila = new Object[8];
+                fila[0] = rs.getInt("id");
+                fila[1] = rs.getString("tipo");
+                fila[2] = rs.getString("titulo");
+                fila[3] = rs.getString("autor");
+                fila[4] = rs.getInt("anio_publicacion");
+                fila[5] = rs.getString("ubicacion");
+                fila[6] = rs.getInt("cantidad_total");
+                fila[7] = rs.getInt("cantidad_disponible");
+                resultados.add(fila);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return resultados;
+    }
+ 
     private void limpiar() {
         campo_titulomaterial_busqueda.setText("");
         campo_codigomaterial_busqueda.setText("");
@@ -120,6 +189,7 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
     private void volverAlMenu() {
         Ventana_PPAL.getInstancia().mostrar(new Panel_administrador());
     }
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -170,14 +240,12 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
 
         boton_limpiar_campos.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         boton_limpiar_campos.setText("LIMPIAR");
-        boton_limpiar_campos.addActionListener(this::boton_limpiar_camposActionPerformed);
 
         boton_regresar_menu_anterior.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         boton_regresar_menu_anterior.setText("CANCELAR");
 
         botn_modificar_primerelementolista.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         botn_modificar_primerelementolista.setText("Modificar");
-        botn_modificar_primerelementolista.addActionListener(this::botn_modificar_primerelementolistaActionPerformed);
 
         botn_modificar_segndoelementolista.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         botn_modificar_segndoelementolista.setText("Modificar");
@@ -192,15 +260,12 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
         jButton8.setText("Modificar");
 
         combobox_selecciónmaterial_busqueda.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
-        combobox_selecciónmaterial_busqueda.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "LIBRO", "REVISTA", "TESIS", "CD", "DVD" }));
 
         jLabel1.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         jLabel1.setText("Titulo");
 
         jLabel2.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         jLabel2.setText("Codigo");
-
-        campo_codigomaterial_busqueda.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
 
         jLabel3.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         jLabel3.setText("Tipo");
@@ -295,15 +360,6 @@ public class Panel_BuscaMat extends javax.swing.JPanel {
                         .addGap(132, 132, 132))))
         );
     }// </editor-fold>//GEN-END:initComponents
-
-    private void boton_limpiar_camposActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_boton_limpiar_camposActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_boton_limpiar_camposActionPerformed
-
-    private void botn_modificar_primerelementolistaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botn_modificar_primerelementolistaActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_botn_modificar_primerelementolistaActionPerformed
-
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton botn_modificar_primerelementolista;

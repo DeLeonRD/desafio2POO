@@ -4,7 +4,7 @@
  */
 package com.mediateca.vistas;
 
-import com.mediateca.vistas.busquedas.Panel_BuscaPest;
+import com.mediateca.vistas.busquedas.Panel_BuscaPestAlumno;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -16,8 +16,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 /**
- *
- * @author Francisco De la O Gonzalez - DG200722
+ * Panel principal para usuarios con rol Alumno.
+ * Permite consultar sus prestamos y ver disponibilidad de materiales.
  */
 public class Panel_Alumno extends javax.swing.JPanel {
 
@@ -27,18 +27,22 @@ public class Panel_Alumno extends javax.swing.JPanel {
         configurarPanelContenido();
     }
 
+    /**
+     * Conecta los botones del menu con sus respectivas acciones.
+     */
     private void cablearEventos() {
-        boton_busca_prestam.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaPest()));
+        boton_busca_prestam.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_BuscaPestAlumno()));
         btnReporteDisponibilidad.addActionListener(e -> Ventana_PPAL.getInstancia().mostrar(new Panel_ReporteDisponibilidad()));
         btnCerrarSesion.addActionListener(e -> cerrarSesion());
     }
 
+    /**
+     * Configura el panel derecho con el mensaje de bienvenida y recomendaciones.
+     */
     private void configurarPanelContenido() {
-        // Configurar el panel derecho (jPanel2) con mensaje de bienvenida
         jPanel2.setBackground(new Color(8, 20, 55));
         jPanel2.setLayout(new GridBagLayout());
         
-        // Panel interno para el contenido centrado
         JPanel pnlMensaje = new JPanel();
         pnlMensaje.setBackground(new Color(8, 20, 55));
         pnlMensaje.setLayout(new GridBagLayout());
@@ -48,19 +52,17 @@ public class Panel_Alumno extends javax.swing.JPanel {
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // Título de bienvenida
-        JLabel lblTituloBienvenida = new JLabel("📚 ¡Bienvenido a la Biblioteca!");
+        JLabel lblTituloBienvenida = new JLabel("Bienvenido a la Biblioteca!");
         lblTituloBienvenida.setFont(new Font("Arial", Font.BOLD, 28));
         lblTituloBienvenida.setForeground(Color.WHITE);
         lblTituloBienvenida.setHorizontalAlignment(SwingConstants.CENTER);
         gbc.gridy = 0;
         pnlMensaje.add(lblTituloBienvenida, gbc);
         
-        // Mensaje de bienvenida
         JLabel lblMensaje = new JLabel("<html><div style='text-align:center; width:500px;'>"
-                + "Te damos la más cordial bienvenida a la Biblioteca Virtual de la Mediateca Don Bosco.<br><br>"
-                + "Aquí encontrarás una amplia colección de libros, revistas, CD<br>"
-                + "y materiales audiovisuales para apoyar tu formación académica."
+                + "Te damos la mas cordial bienvenida a la Biblioteca Virtual de la Mediateca Don Bosco.<br><br>"
+                + "Aqui encontraras una amplia coleccion de libros, revistas, CD<br>"
+                + "y materiales audiovisuales para apoyar tu formacion academica."
                 + "</div></html>");
         lblMensaje.setFont(new Font("Arial", Font.PLAIN, 16));
         lblMensaje.setForeground(new Color(220, 220, 220));
@@ -68,13 +70,12 @@ public class Panel_Alumno extends javax.swing.JPanel {
         gbc.gridy = 1;
         pnlMensaje.add(lblMensaje, gbc);
         
-        // Recomendación - Cuidado de materiales
         JLabel lblRecomendacion = new JLabel("<html><div style='text-align:center; width:500px;'>"
-                + "📖 <b>Recomendación importante:</b><br><br>"
-                + "Por favor, cuida los materiales que solicites en préstamo.<br>"
-                + "Devuélvelos en buen estado y en la fecha establecida<br>"
-                + "para que otros compañeros también puedan disfrutarlos.<br><br>"
-                + "✨ <b>¡La biblioteca es de todos, cuidémosla juntos!</b> ✨"
+                + "Recomendacion importante:<br><br>"
+                + "Por favor, cuida los materiales que solicites en prestamo.<br>"
+                + "Devuelvelos en buen estado y en la fecha establecida<br>"
+                + "para que otros companeros tambien puedan disfrutarlos.<br><br>"
+                + "La biblioteca es de todos, cuidemosla juntos!"
                 + "</div></html>");
         lblRecomendacion.setFont(new Font("Arial", Font.PLAIN, 14));
         lblRecomendacion.setForeground(new Color(200, 200, 200));
@@ -87,11 +88,10 @@ public class Panel_Alumno extends javax.swing.JPanel {
         gbc.insets = new Insets(30, 15, 15, 15);
         pnlMensaje.add(lblRecomendacion, gbc);
         
-        // Horario de atención
         JLabel lblHorario = new JLabel("<html><div style='text-align:center;'>"
-                + "🕐 <b>Horario de atención:</b><br>"
+                + "Horario de atencion:<br>"
                 + "Lunes a Viernes: 8:00 AM - 8:00 PM<br>"
-                + "Sábados: 9:00 AM - 2:00 PM"
+                + "Sabados: 9:00 AM - 2:00 PM"
                 + "</div></html>");
         lblHorario.setFont(new Font("Arial", Font.PLAIN, 12));
         lblHorario.setForeground(new Color(150, 150, 150));
@@ -109,6 +109,9 @@ public class Panel_Alumno extends javax.swing.JPanel {
         jPanel2.add(pnlMensaje, center);
     }
 
+    /**
+     * Cierra la sesion actual y vuelve a la pantalla de bienvenida.
+     */
     private void cerrarSesion() {
         com.mediateca.util.SessionManager.cerrarSesion();
         Ventana_PPAL ventana = Ventana_PPAL.getInstancia();
@@ -135,10 +138,10 @@ public class Panel_Alumno extends javax.swing.JPanel {
         jPanel1.setBackground(new java.awt.Color(11, 19, 43));
         jPanel1.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(204, 204, 204), 1, true));
 
-        boton_busca_prestam.setText("Mis Préstamos");
+        boton_busca_prestam.setText("Mis Prestamos");
         boton_busca_prestam.setFont(new java.awt.Font("Arial", 0, 14));
 
-        btnReporteDisponibilidad.setText("📊 Ver Disponibilidad");
+        btnReporteDisponibilidad.setText("Ver Disponibilidad");
         btnReporteDisponibilidad.setFont(new java.awt.Font("Arial", 0, 14));
 
         jLabel1.setFont(new java.awt.Font("Arial", 0, 18));
@@ -151,12 +154,12 @@ public class Panel_Alumno extends javax.swing.JPanel {
 
         jLabel4.setFont(new java.awt.Font("Arial", 0, 16));
         jLabel4.setForeground(new java.awt.Color(200, 200, 200));
-        jLabel4.setText("Préstamos");
+        jLabel4.setText("Prestamos");
 
         btnCerrarSesion.setBackground(new java.awt.Color(204, 0, 0));
         btnCerrarSesion.setFont(new java.awt.Font("Arial", 1, 12));
         btnCerrarSesion.setForeground(new java.awt.Color(255, 255, 255));
-        btnCerrarSesion.setText("Cerrar Sesión");
+        btnCerrarSesion.setText("Cerrar Sesion");
         btnCerrarSesion.setBorderPainted(false);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
@@ -194,7 +197,7 @@ public class Panel_Alumno extends javax.swing.JPanel {
         );
 
         jPanel2.setBackground(new java.awt.Color(11, 30, 78));
-        jPanel2.setLayout(new GridBagLayout()); // Se configurará en configurarPanelContenido()
+        jPanel2.setLayout(new GridBagLayout());
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
